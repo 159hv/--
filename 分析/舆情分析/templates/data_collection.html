@@ -194,9 +194,9 @@
             // 渲染表单
             form.render();
             
-            // 监听采集表单提交
-            form.on('submit(start-collection)', function(data) {
-                var loading = layer.load(2, {time: 15000});
+        // 监听采集表单提交
+        form.on('submit(start-collection)', function(data) {
+            var loading = layer.load(2, {time: 15000});
                 
                 // 发送AJAX请求到后端采集数据
                 $.ajax({
@@ -211,6 +211,36 @@
                         if (res.code === 0) {
                             // 显示采集结果
                             renderCollectionResult(res.data);
+                            try {
+                                var ids = (res.data || []).map(function(it){ return it.id; });
+                                if (ids.length > 0) {
+                                    $.ajax({
+                                        url: '/data/warehouse/batch-save',
+                                        type: 'POST',
+                                        data: { 'collection_ids[]': ids },
+                                        traditional: true,
+                                        success: function(saveRes) {
+                                            var saved = saveRes.saved_ids || [];
+                                            if (saved.length > 0) {
+                                                $.ajax({
+                                                    url: '/data/warehouse/batch-detailed-collect',
+                                                    type: 'POST',
+                                                    data: { 'ids[]': saved },
+                                                    traditional: true,
+                                                    success: function() {
+                                                        $.ajax({
+                                                            url: '/data/warehouse/ai-analysis',
+                                                            type: 'POST',
+                                                            data: { 'ids[]': saved },
+                                                            traditional: true
+                                                        });
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                            } catch(e) {}
                         } else {
                             layer.msg(res.msg, {icon: 2});
                         }
@@ -296,15 +326,32 @@
                     btn.attr('disabled', true);
                     
                     $.ajax({
-                        url: '/data/batch-save-to-warehouse',
+                        url: '/data/warehouse/batch-save',
                         type: 'POST',
                         data: {
-                            'ids[]': ids
+                            'collection_ids[]': ids
                         },
                         success: function(res) {
                             if (res.code === 0) {
                                 layer.msg(res.msg, { icon: 6 });
-                                location.reload(); // 刷新页面显示最新状态
+                                var saved = res.saved_ids || [];
+                                if (saved.length > 0) {
+                                    $.ajax({
+                                        url: '/data/warehouse/batch-detailed-collect',
+                                        type: 'POST',
+                                        data: { 'ids[]': saved },
+                                        traditional: true,
+                                        success: function() {
+                                            $.ajax({
+                                                url: '/data/warehouse/ai-analysis',
+                                                type: 'POST',
+                                                data: { 'ids[]': saved },
+                                                traditional: true
+                                            });
+                                        }
+                                    });
+                                }
+                                location.reload();
                             } else {
                                 layer.msg(res.msg, { icon: 5 });
                             }

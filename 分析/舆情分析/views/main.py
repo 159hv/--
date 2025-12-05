@@ -392,8 +392,9 @@ def batch_save_to_warehouse():
         logger = logging.getLogger(__name__)
         logger.info(f"用户{current_user.id}开始批量保存数据到仓库，数量：{len(collection_ids)}")
         
-        from models import CollectionTemp, DataWarehouse
+        from models import CollectionTemp, DataWarehouse, CollectionRule
         saved_count = 0
+        saved_ids = []
         
         for collection_id in collection_ids:
             collection = CollectionTemp.query.get(collection_id)
@@ -414,14 +415,31 @@ def batch_save_to_warehouse():
                     collected_by=current_user.id
                 )
                 db.session.add(data)
+                db.session.flush()
+                saved_ids.append(data.id)
                 saved_count += 1
                 
                 # 从临时表中删除已保存的数据
                 db.session.delete(collection)
+                if collection.source:
+                    rule = CollectionRule.query.filter_by(site_name=collection.source).first()
+                    if not rule:
+                        rule = CollectionRule(
+                            site_name=collection.source,
+                            site_url=collection.url or '',
+                            title_xpath='//h1',
+                            content_xpath='//article',
+                            request_headers='{}',
+                            created_by=current_user.id
+                        )
+                        db.session.add(rule)
+                    else:
+                        if not rule.site_url and collection.url:
+                            rule.site_url = collection.url
         
         db.session.commit()
         logger.info(f"用户{current_user.id}成功批量保存{saved_count}条数据到仓库")
-        return jsonify({'code': 0, 'msg': f'成功保存{saved_count}条数据到仓库'})
+        return jsonify({'code': 0, 'msg': f'成功保存{saved_count}条数据到仓库', 'saved_ids': saved_ids})
     except Exception as e:
         db.session.rollback()
         logging.getLogger(__name__).error(f"用户{current_user.id}批量保存数据到仓库失败：{str(e)}", exc_info=True)
