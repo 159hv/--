@@ -245,6 +245,19 @@ def data_collection():
             return jsonify({'code': 1, 'msg': '不支持的爬虫类型'})
         
         logger.info(f"用户{current_user.id}采集到{len(results)}条数据")
+        def _is_dirty_text(s):
+            if s is None:
+                return True
+            t = str(s).strip()
+            if t == '':
+                return True
+            l = t.lower()
+            return l in {'未知', '无标题', '未知标题', 'none', 'null', '-', 'n/a'}
+        def _is_dirty_item(r):
+            return _is_dirty_text(r.get('title')) or _is_dirty_text(r.get('summary')) or _is_dirty_text(r.get('url'))
+        raw_count = len(results)
+        results = [r for r in results if not _is_dirty_item(r)]
+        filtered_count = raw_count - len(results)
         
         # 将采集结果保存到临时表
         from models import CollectionTemp
@@ -258,7 +271,7 @@ def data_collection():
                 # 创建新的临时记录
                 temp_item = CollectionTemp(
                     title=result.get('title', ''),
-                    content=result.get('summary', '') or '无内容',
+                    content=result.get('summary', ''),
                     summary=result.get('summary', ''),
                     source=result.get('source', ''),
                     url=result.get('url', ''),
@@ -291,7 +304,7 @@ def data_collection():
         
         return jsonify({
             'code': 0, 
-            'msg': f'采集成功，新增{saved_count}条记录', 
+            'msg': f'采集成功，新增{saved_count}条记录，过滤脏数据{filtered_count}条', 
             'data': formatted_data
         })
     except Exception as e:
@@ -395,11 +408,24 @@ def batch_save_to_warehouse():
         from models import CollectionTemp, DataWarehouse, CollectionRule
         saved_count = 0
         saved_ids = []
+        dirty_filtered = 0
+        def _is_dirty_text(s):
+            if s is None:
+                return True
+            t = str(s).strip()
+            if t == '':
+                return True
+            l = t.lower()
+            return l in {'未知', '无标题', '未知标题', 'none', 'null', '-', 'n/a'}
         
         for collection_id in collection_ids:
             collection = CollectionTemp.query.get(collection_id)
             if not collection:
                 logger.warning(f"用户{current_user.id}尝试保存不存在的临时记录：{collection_id}")
+                continue
+            
+            if _is_dirty_text(collection.title) or _is_dirty_text(collection.content) or _is_dirty_text(collection.url):
+                dirty_filtered += 1
                 continue
             
             # 检查数据仓库中是否已存在相同URL的记录
@@ -439,7 +465,7 @@ def batch_save_to_warehouse():
         
         db.session.commit()
         logger.info(f"用户{current_user.id}成功批量保存{saved_count}条数据到仓库")
-        return jsonify({'code': 0, 'msg': f'成功保存{saved_count}条数据到仓库', 'saved_ids': saved_ids})
+        return jsonify({'code': 0, 'msg': f'成功保存{saved_count}条数据到仓库，过滤脏数据{dirty_filtered}条', 'saved_ids': saved_ids})
     except Exception as e:
         db.session.rollback()
         logging.getLogger(__name__).error(f"用户{current_user.id}批量保存数据到仓库失败：{str(e)}", exc_info=True)
