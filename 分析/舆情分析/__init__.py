@@ -28,11 +28,11 @@ def create_app(config_name=None):
         config_name = os.environ.get('FLASK_CONFIG', 'default')
     
     app = Flask(__name__, 
-                template_folder=os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'templates'),
-                static_folder=os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'static'))
+                template_folder=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'templates'),
+                static_folder=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static'))
     
     # 配置应用
-    from app.config import config
+    from config import config
     app.config.from_object(config[config_name])
     
     # 初始化扩展
@@ -82,12 +82,12 @@ def configure_logging(app):
         app.logger.info('应用已启动')
     
     # 注册蓝图
-    from app.views import main as main_blueprint
+    from views import main as main_blueprint
     app.register_blueprint(main_blueprint)
     
     # 初始化API
     api = Api(app, default_mediatype='application/json')
-    from app.api.routes import register_routes
+    from api.routes import register_routes
     register_routes(api)
     
     return app
@@ -95,5 +95,5 @@ def configure_logging(app):
 @login_manager.user_loader
 def load_user(user_id):
     """加载用户"""
-    from app.models import User
+    from models import User
     return User.query.get(int(user_id))

@@ -1,7 +1,7 @@
 from flask_restful import Resource, reqparse
 from flask import jsonify, current_app
-from app import db
-from app.models import Topic, Keyword, User, Role
+from __init__ import db
+from models import Topic, Keyword, User, Role
 from datetime import datetime
 from flask_login import current_user, login_required
 

@@ -1,5 +1,5 @@
-from app import create_app, db
-from app.models.models import User, Role
+from __init__ import create_app, db
+from models.models import User, Role
 import os
 import logging
 

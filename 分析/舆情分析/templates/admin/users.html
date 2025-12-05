@@ -44,11 +44,13 @@
                     
                     <!-- 状态模板 -->
                     <script type="text/html" id="user-status">
-                        {% if d.status %}
+                        {% raw %}
+                        {{# if(d.status){ }}
                         <span class="layui-badge layui-bg-green">启用</span>
-                        {% else %}
+                        {{# } else { }}
                         <span class="layui-badge layui-bg-red">禁用</span>
-                        {% endif %}
+                        {{# } }}
+                        {% endraw %}
                     </script>
                 </div>
             </div>
@@ -112,6 +114,7 @@
         </div>
     </form>
 </div>
+{% endblock %}
 
 {% block scripts %}
 <script>

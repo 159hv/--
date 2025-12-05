@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db
-from app.models import User, Role, Setting, DataWarehouse, CollectionRule, AiEngine
+from __init__ import db
+from models import User, Role, Setting, DataWarehouse, CollectionRule, AiEngine
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import time
@@ -213,7 +213,7 @@ def data_collection():
     """数据采集页面和API"""
     if request.method == 'GET':
         # 获取当前用户的采集结果
-        from app.models import CollectionTemp
+        from models import CollectionTemp
         collections = CollectionTemp.query.filter_by(collected_by=current_user.id).order_by(CollectionTemp.collected_at.desc()).all()
         return render_template('data_collection.html', collections=collections)
     
@@ -228,7 +228,7 @@ def data_collection():
         logger.info(f"用户{current_user.id}开始采集数据，爬虫类型：{spider_type}，关键词：{keyword}，页码：{page}")
         
         if spider_type == 'baidu':
-            from app.services.spider import BaiduSpider
+            from services.spider import BaiduSpider
             spider = BaiduSpider()
             # 百度爬虫需要关键词
             if not keyword:
@@ -236,7 +236,7 @@ def data_collection():
                 return jsonify({'code': 1, 'msg': '请输入搜索关键词'})
             results = spider.fetch_data(keyword, page)
         elif spider_type == 'xinhua':
-            from app.services.spider import XinhuaSpider
+            from services.spider import XinhuaSpider
             spider = XinhuaSpider()
             # 新华爬虫目前不支持关键词搜索，使用默认关键词
             results = spider.fetch_data(keyword, page)
@@ -247,7 +247,7 @@ def data_collection():
         logger.info(f"用户{current_user.id}采集到{len(results)}条数据")
         
         # 将采集结果保存到临时表
-        from app.models import CollectionTemp
+        from models import CollectionTemp
         from datetime import datetime
         
         saved_count = 0
@@ -324,7 +324,7 @@ def deep_collection():
         
         # 更新临时表中的记录
         if collection_id:
-            from app.models import CollectionTemp
+            from models import CollectionTemp
             temp_item = CollectionTemp.query.get(collection_id)
             if temp_item:
                 temp_item.content = deep_content
@@ -350,7 +350,7 @@ def save_to_warehouse():
     collection_id = request.form.get('id')
     
     try:
-        from app.models import CollectionTemp, DataWarehouse
+        from models import CollectionTemp, DataWarehouse
         from datetime import datetime
         
         # 查找临时数据
@@ -392,7 +392,7 @@ def batch_save_to_warehouse():
         logger = logging.getLogger(__name__)
         logger.info(f"用户{current_user.id}开始批量保存数据到仓库，数量：{len(collection_ids)}")
         
-        from app.models import CollectionTemp, DataWarehouse
+        from models import CollectionTemp, DataWarehouse
         saved_count = 0
         
         for collection_id in collection_ids:
@@ -432,7 +432,7 @@ def batch_save_to_warehouse():
 def clear_collection():
     """清空临时采集数据"""
     try:
-        from app.models import CollectionTemp
+        from models import CollectionTemp
         
         # 删除当前用户的所有临时采集数据
         CollectionTemp.query.filter_by(collected_by=current_user.id).delete()
@@ -447,7 +447,7 @@ def clear_collection():
 @login_required
 def data_warehouse():
     """数据仓库管理页面"""
-    from app.models import DataWarehouse, DetailedContent
+    from models import DataWarehouse, DetailedContent
     from sqlalchemy.orm import joinedload
     
     # 获取分页参数
@@ -474,7 +474,7 @@ def data_warehouse():
 @login_required
 def update_topic(topic_id):
     """更新仓库数据"""
-    from app.models import DataWarehouse
+    from models import DataWarehouse
     from datetime import datetime
     
     try:
@@ -514,7 +514,7 @@ def update_topic(topic_id):
 @login_required
 def delete_topic(topic_id):
     """删除仓库数据"""
-    from app.models import DataWarehouse
+    from models import DataWarehouse
     
     try:
         # 查找仓库数据
@@ -535,7 +535,7 @@ def delete_topic(topic_id):
 @login_required
 def batch_delete_topics():
     """批量删除仓库数据"""
-    from app.models import DataWarehouse
+    from models import DataWarehouse
     
     try:
         # 获取要删除的ID列表
@@ -557,7 +557,7 @@ def batch_delete_topics():
 def get_today_topics():
     """获取今日舆情数量"""
     try:
-        from app.models import DataWarehouse
+        from models import DataWarehouse
         from datetime import datetime, date
         
         today = date.today()
@@ -575,7 +575,7 @@ def get_today_topics():
 def get_sentiment_distribution():
     """获取情感分布统计"""
     try:
-        from app.models import DataWarehouse
+        from models import DataWarehouse
         
         # 这里假设sentiment字段存在且有值，实际项目中可能需要根据实际情况调整
         # 由于当前模型中DataWarehouse没有sentiment字段，这里使用固定数据作为示例
@@ -614,7 +614,7 @@ def get_hot_keywords():
 @login_required
 def detailed_collect(topic_id):
     """单条数据详细内容采集"""
-    from app.models import DetailedContent
+    from models import DetailedContent
     try:
         # 获取数据仓库中的记录
         topic = DataWarehouse.query.get(topic_id)
@@ -823,7 +823,7 @@ def auto_update_rules(html, source):
 def get_detailed_content(topic_id):
     """获取单条数据的详细内容"""
     try:
-        from app.models import DetailedContent
+        from models import DetailedContent
         
         # 查找详细内容记录
         detailed_content = DetailedContent.query.filter_by(warehouse_id=topic_id).first()
@@ -855,7 +855,7 @@ def get_detailed_content(topic_id):
 @login_required
 def batch_detailed_collect():
     """批量数据详细内容采集"""
-    from app.models import DetailedContent
+    from models import DetailedContent
     try:
         # 获取要采集的ID列表
         ids = request.form.getlist('ids[]')
@@ -1219,7 +1219,7 @@ def get_ai_engine(engine_id):
 @admin_required
 def collection_rules():
     """采集规则库页面"""
-    from app.models import CollectionRule
+    from models import CollectionRule
     
     # 获取分页参数
     page = request.args.get('page', 1, type=int)
@@ -1246,7 +1246,7 @@ def collection_rules():
 @admin_required
 def add_collection_rule():
     """添加采集规则"""
-    from app.models import CollectionRule
+    from models import CollectionRule
     import json
     
     try:
@@ -1292,7 +1292,7 @@ def add_collection_rule():
 @admin_required
 def update_collection_rule(rule_id):
     """更新采集规则"""
-    from app.models import CollectionRule
+    from models import CollectionRule
     import json
     
     try:
@@ -1338,7 +1338,7 @@ def update_collection_rule(rule_id):
 @admin_required
 def delete_collection_rule(rule_id):
     """删除采集规则"""
-    from app.models import CollectionRule
+    from models import CollectionRule
     
     try:
         # 获取规则
@@ -1360,7 +1360,7 @@ def delete_collection_rule(rule_id):
 @admin_required
 def get_collection_rule(rule_id):
     """获取单个采集规则的JSON数据"""
-    from app.models import CollectionRule
+    from models import CollectionRule
     import json
     
     try:
