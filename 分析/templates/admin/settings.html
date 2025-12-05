@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}系统设置 - {{ app_name }}{% endblock %}
+
+{% block page_title %}系统设置{% endblock %}
+
+{% block content %}
+<div class="layui-container">
+    <div class="layui-row">
+        <div class="layui-col-lg12">
+            <h2 class="layui-mt-4 layui-text-center">系统设置</h2>
+            
+            <!-- 系统设置表单 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-header">
+                    <h3 class="layui-card-title">基本设置</h3>
+                </div>
+                <div class="layui-card-body">
+                    <form class="layui-form" lay-filter="settings-form">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">应用名称</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="app_name" required lay-verify="required" placeholder="请输入应用名称" 
+                                       autocomplete="off" class="layui-input" value="{{ settings[0].value if settings else '政企智能舆情分析系统' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">LOGO设置</label>
+                            <div class="layui-input-block">
+                                <div class="layui-upload">
+                                    <button type="button" class="layui-btn" id="logo-upload">
+                                        <i class="layui-icon layui-icon-upload-drag"></i> 上传LOGO
+                                    </button>
+                                    <div class="layui-upload-list layui-mt-2">
+                                        <img class="layui-upload-img" id="logo-preview" style="max-width: 200px;">
+                                        <p id="logo-upload-text"></p>
+                                    </div>
+                                    <input type="hidden" name="logo_path" id="logo-path">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="layui-form-item layui-form-text">
+                            <label class="layui-form-label">系统说明</label>
+                            <div class="layui-input-block">
+                                <textarea placeholder="请输入系统说明" class="layui-textarea" disabled>
+政企智能舆情分析系统
+版本: 1.0.0
+开发团队: AI舆情分析小组
+                                </textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="save-settings">
+                                    <i class="layui-icon layui-icon-save"></i> 保存设置
+                                </button>
+                                <button type="reset" class="layui-btn layui-btn-primary">
+                                    <i class="layui-icon layui-icon-refresh"></i> 重置
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 系统信息 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-header">
+                    <h3 class="layui-card-title">系统信息</h3>
+                </div>
+                <div class="layui-card-body">
+                    <table class="layui-table">
+                        <thead>
+                            <tr>
+                                <th>项目</th>
+                                <th>信息</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>系统版本</td>
+                                <td>1.0.0</td>
+                            </tr>
+                            <tr>
+                                <td>开发框架</td>
+                                <td>Flask + Layui</td>
+                            </tr>
+                            <tr>
+                                <td>数据库</td>
+                                <td>SQLite</td>
+                            </tr>
+                            <tr>
+                                <td>最后更新</td>
+                                <td>{{ settings[0].updated_at.strftime('%Y-%m-%d %H:%M:%S') if settings else '2023-01-01 00:00:00' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    layui.use(['form', 'layer', 'upload'], function() {
+        var form = layui.form;
+        var layer = layui.layer;
+        var upload = layui.upload;
+        
+        // 表单提交事件
+        form.on('submit(save-settings)', function(data) {
+            // 发送保存请求
+            $.post('/admin/setting/save', data.field, function(res) {
+                if (res.status === 'success') {
+                    layer.msg(res.message, {icon: 1});
+                    // 刷新页面以显示新设置
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    layer.msg(res.message, {icon: 2});
+                }
+            });
+            return false;
+        });
+        
+        // 上传LOGO
+        upload.render({
+            elem: '#logo-upload',
+            url: '/admin/upload/logo',
+            accept: 'images',
+            acceptMime: 'image/*',
+            before: function(obj) {
+                // 预读本地文件
+                obj.preview(function(index, file, result) {
+                    $('#logo-preview').attr('src', result); // 图片链接（base64）
+                });
+            },
+            done: function(res) {
+                if (res.status === 'success') {
+                    $('#logo-path').val(res.data.path);
+                    $('#logo-upload-text').html('<span style="color: #5FB878;">上传成功</span>');
+                    layer.msg('LOGO上传成功！', {icon: 1});
+                } else {
+                    $('#logo-upload-text').html('<span style="color: #FF5722;">上传失败</span>');
+                    layer.msg(res.message, {icon: 2});
+                }
+            },
+            error: function() {
+                $('#logo-upload-text').html('<span style="color: #FF5722;">上传失败</span>');
+                layer.msg('上传失败，请重试！', {icon: 2});
+            }
+        });
+        
+        // 初始化表单
+        form.render();
+    });
+</script>
+{% endblock scripts %}

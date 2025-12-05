@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+
+{% block title %}用户管理 - {{ app_name }}{% endblock %}
+
+{% block page_title %}用户管理{% endblock %}
+
+{% block content %}
+<div class="layui-container">
+    <div class="layui-row">
+        <div class="layui-col-lg12">
+            <h2 class="layui-mt-4 layui-text-center">用户管理</h2>
+            
+            <!-- 搜索和添加按钮 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-body">
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <div class="layui-input-inline">
+                                <input type="text" name="search_username" placeholder="请输入用户名" autocomplete="off" class="layui-input" id="search_username">
+                            </div>
+                            <button class="layui-btn layui-btn-primary" id="search-btn">
+                                <i class="layui-icon layui-icon-search"></i> 搜索
+                            </button>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn layui-btn-normal" id="add-user-btn">
+                                <i class="layui-icon layui-icon-add-circle"></i> 添加用户
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 用户列表表格 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-body">
+                    <table class="layui-hide" id="users-table" lay-filter="users-table"></table>
+                    
+                    <!-- 操作栏模板 -->
+                    <script type="text/html" id="user-bar">
+                        <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+                        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</a>
+                    </script>
+                    
+                    <!-- 状态模板 -->
+                    <script type="text/html" id="user-status">
+                        {% if d.status %}
+                        <span class="layui-badge layui-bg-green">启用</span>
+                        {% else %}
+                        <span class="layui-badge layui-bg-red">禁用</span>
+                        {% endif %}
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加用户弹窗 -->
+<div id="add-user-modal" style="display: none;">
+    <form class="layui-form" lay-filter="add-user-form">
+        <div class="layui-form-item">
+            <label class="layui-form-label">用户名</label>
+            <div class="layui-input-block">
+                <input type="text" name="username" required lay-verify="required" placeholder="请输入用户名" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">密码</label>
+            <div class="layui-input-block">
+                <input type="password" name="password" required lay-verify="required" placeholder="请输入密码" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">角色</label>
+            <div class="layui-input-block">
+                <select name="role_id" lay-verify="required">
+                    {% for role in roles %}
+                    <option value="{{ role.id }}">{{ role.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 编辑用户弹窗 -->
+<div id="edit-user-modal" style="display: none;">
+    <form class="layui-form" lay-filter="edit-user-form">
+        <input type="hidden" name="user_id" id="edit-user-id">
+        <div class="layui-form-item">
+            <label class="layui-form-label">用户名</label>
+            <div class="layui-input-block">
+                <input type="text" name="username" required lay-verify="required" placeholder="请输入用户名" autocomplete="off" class="layui-input" id="edit-username">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">角色</label>
+            <div class="layui-input-block">
+                <select name="role_id" lay-verify="required" id="edit-role-id">
+                    {% for role in roles %}
+                    <option value="{{ role.id }}">{{ role.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">状态</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="status" lay-skin="switch" lay-text="启用|禁用" id="edit-status">
+            </div>
+        </div>
+    </form>
+</div>
+
+{% block scripts %}
+<script>
+    layui.use(['table', 'form', 'layer'], function() {
+        var table = layui.table;
+        var form = layui.form;
+        var layer = layui.layer;
+        
+        // 渲染表格
+        table.render({
+            elem: '#users-table',
+            url: '/api/v1/users',
+            cols: [[
+                {field: 'id', title: 'ID', width: 80, sort: true},
+                {field: 'username', title: '用户名', width: 150},
+                {field: 'role_id', title: '角色ID', width: 80},
+                {field: 'created_at', title: '创建时间', width: 200},
+                {field: 'status', title: '状态', width: 100, templet: '#user-status'},
+                {title: '操作', width: 150, toolbar: '#user-bar', fixed: 'right'}
+            ]],
+            page: true,
+            limit: 10,
+            limits: [10, 20, 50, 100],
+            height: 'full-200'
+        });
+        
+        // 添加用户按钮点击事件
+        document.getElementById('add-user-btn').onclick = function() {
+            layer.open({
+                type: 1,
+                title: '添加用户',
+                content: document.getElementById('add-user-modal'),
+                area: ['500px', '400px'],
+                btn: ['保存', '取消'],
+                success: function(layero, index) {
+                    // 重置表单
+                    form.val('add-user-form', {});
+                    form.render();
+                },
+                yes: function(index, layero) {
+                    // 验证表单
+                    form.on('submit(add-user-form)', function(data) {
+                        // 发送添加请求
+                        $.post('/admin/user/add', data.field, function(res) {
+                            if (res.status === 'success') {
+                                layer.msg(res.message, {icon: 1});
+                                layer.close(index);
+                                table.reload('users-table');
+                            } else {
+                                layer.msg(res.message, {icon: 2});
+                            }
+                        });
+                        return false;
+                    });
+                    
+                    // 模拟点击提交
+                    layero.find('button.layui-layer-btn0')[0].click();
+                }
+            });
+        };
+        
+        // 表格操作事件
+        table.on('tool(users-table)', function(obj) {
+            var data = obj.data;
+            if (obj.event === 'edit') {
+                // 编辑用户
+                document.getElementById('edit-user-id').value = data.id;
+                document.getElementById('edit-username').value = data.username;
+                document.getElementById('edit-role-id').value = data.role_id;
+                document.getElementById('edit-status').checked = data.status;
+                
+                layer.open({
+                    type: 1,
+                    title: '编辑用户',
+                    content: document.getElementById('edit-user-modal'),
+                    area: ['500px', '400px'],
+                    btn: ['保存', '取消'],
+                    success: function(layero, index) {
+                        form.render();
+                    },
+                    yes: function(index, layero) {
+                        // 验证表单
+                        form.on('submit(edit-user-form)', function(data) {
+                            // 发送编辑请求
+                            $.post('/admin/user/edit', data.field, function(res) {
+                                if (res.status === 'success') {
+                                    layer.msg(res.message, {icon: 1});
+                                    layer.close(index);
+                                    table.reload('users-table');
+                                } else {
+                                    layer.msg(res.message, {icon: 2});
+                                }
+                            });
+                            return false;
+                        });
+                        
+                        // 模拟点击提交
+                        layero.find('button.layui-layer-btn0')[0].click();
+                    }
+                });
+            } else if (obj.event === 'delete') {
+                // 删除用户
+                layer.confirm('确定要删除用户 ' + data.username + ' 吗？', function(index) {
+                    $.post('/admin/user/delete/' + data.id, function(res) {
+                        if (res.status === 'success') {
+                            layer.msg(res.message, {icon: 1});
+                            obj.del();
+                        } else {
+                            layer.msg(res.message, {icon: 2});
+                        }
+                    });
+                    layer.close(index);
+                });
+            }
+        });
+        
+        // 搜索按钮点击事件
+        document.getElementById('search-btn').onclick = function() {
+            var username = document.getElementById('search_username').value;
+            // 重新渲染表格，传入搜索参数
+            table.reload('users-table', {
+                where: {
+                    search_username: username
+                },
+                page: {
+                    curr: 1 // 重新从第1页开始
+                }
+            });
+        };
+    });
+</script>
+{% endblock %}

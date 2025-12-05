@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% block page_title %}数据仓库管理{% endblock %}
+{% block content %}
+
+<!-- 数据仓库操作区 -->
+<div class="layui-card">
+    <div class="layui-card-header">
+        <div class="layui-btn-group">
+            <button class="layui-btn layui-btn-primary" id="batch-delete">批量删除</button>
+            <button class="layui-btn layui-btn-normal" id="ai-analysis">AI解析分析</button>
+            <button class="layui-btn layui-btn-success" id="detailed-collection">详细内容采集</button>
+        </div>
+        <div class="layui-input-inline" style="float: right;">
+            <input type="text" name="keyword" placeholder="搜索标题" autocomplete="off" class="layui-input" id="search-keyword">
+        </div>
+        <button class="layui-btn layui-btn-search" style="float: right; margin-right: 10px;" id="search-btn">搜索</button>
+    </div>
+    <div class="layui-card-body">
+        
+        <!-- 数据列表 -->
+        <table class="layui-table" lay-filter="data-table" id="data-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" name="selectAll" lay-skin="primary" lay-filter="selectAll"></th>
+                    <th>ID</th>
+                    <th>标题</th>
+                    <th>内容</th>
+                    <th>来源</th>
+                    <th>发布时间</th>
+                    <th>采集时间</th>
+                    <th>采集状态</th>
+                    <th>失败原因</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for topic in topics.items %}
+                <tr data-id="{{ topic.id }}">
+                    <td><input type="checkbox" name="selectItem" lay-skin="primary" value="{{ topic.id }}"></td>
+                    <td>{{ topic.id }}</td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="{{ topic.url }}" target="_blank">{{ topic.title }}</a>
+                    </td>
+                    <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ topic.content }}</td>
+                    <td>{{ topic.source }}</td>
+                    <td>{{ topic.published_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ topic.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>
+                        {% if topic.detailed_content %}
+                            {% if topic.detailed_content.is_collected %}
+                                <span style="color: green;">成功</span>
+                            {% else %}
+                                <span style="color: red;">失败</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: gray;">未采集</span>
+                        {% endif %}
+                    </td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        {% if topic.detailed_content and not topic.detailed_content.is_collected %}
+                            {{ topic.detailed_content.collection_error | default('未知错误', true) }}
+                        {% elif topic.detailed_content %}
+                            - 
+                        {% else %}
+                            - 
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="layui-btn layui-btn-xs layui-btn-normal edit-btn" data-id="{{ topic.id }}">编辑</button>
+                        <button class="layui-btn layui-btn-xs layui-btn-danger delete-btn" data-id="{{ topic.id }}">删除</button>
+                        <button class="layui-btn layui-btn-xs layui-btn-warm ai-btn" data-id="{{ topic.id }}">AI分析</button>
+                        <button class="layui-btn layui-btn-xs layui-btn-success detail-collect-btn" data-id="{{ topic.id }}">详细采集</button>
+                        <button class="layui-btn layui-btn-xs layui-btn-info preview-btn" data-id="{{ topic.id }}">预览</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- 分页控件 -->
+        <div id="page" class="layui-box layui-laypage layui-laypage-default"></div>
+    </div>
+</div>
+
+<!-- 编辑表单弹窗 -->
+<div id="edit-form" style="display: none;">
+    <form class="layui-form" id="topic-form">
+        <input type="hidden" name="id" id="edit-id">
+        <div class="layui-form-item">
+            <label class="layui-form-label">标题</label>
+            <div class="layui-input-block">
+                <input type="text" name="title" required  lay-verify="required" placeholder="请输入标题" autocomplete="off" class="layui-input" id="edit-title">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">内容</label>
+            <div class="layui-input-block">
+                <textarea name="content" required lay-verify="required" placeholder="请输入内容" class="layui-textarea" id="edit-content" rows="6"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">来源</label>
+            <div class="layui-input-block">
+                <input type="text" name="source" placeholder="请输入来源" autocomplete="off" class="layui-input" id="edit-source">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">URL</label>
+            <div class="layui-input-block">
+                <input type="text" name="url" placeholder="请输入URL" autocomplete="off" class="layui-input" id="edit-url">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">发布时间</label>
+            <div class="layui-input-block">
+                <input type="datetime-local" name="published_at" class="layui-input" id="edit-published-at">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn layui-btn-primary" id="cancel-edit">取消</button>
+                <button type="submit" class="layui-btn" lay-submit lay-filter="save-edit">保存</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 详细内容预览弹窗 -->
+<div id="preview-form" style="display: none;">
+    <div class="layui-form" id="preview-topic-form">
+        <input type="hidden" name="id" id="preview-id">
+        <div class="layui-form-item">
+            <label class="layui-form-label">详细标题</label>
+            <div class="layui-input-block">
+                <input type="text" name="detailed_title" disabled placeholder="无详细标题" class="layui-input" id="preview-detailed-title">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">详细内容</label>
+            <div class="layui-input-block">
+                <textarea name="detailed_content" disabled placeholder="无详细内容" class="layui-textarea" id="preview-detailed-content" rows="12"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">采集状态</label>
+            <div class="layui-input-block">
+                <input type="text" name="collected_status" disabled placeholder="未知" class="layui-input" id="preview-collected-status">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">采集时间</label>
+            <div class="layui-input-block">
+                <input type="text" name="collected_at" disabled placeholder="未采集" class="layui-input" id="preview-collected-at">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">错误信息</label>
+            <div class="layui-input-block">
+                <textarea name="collection_error" disabled placeholder="无错误信息" class="layui-textarea" id="preview-collection-error" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn layui-btn-primary" id="cancel-preview">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    layui.use(['table', 'form', 'layer', 'laypage'], function() {
+        var table = layui.table;
+        var form = layui.form;
+        var layer = layui.layer;
+        var laypage = layui.laypage;
+        
+        // 渲染表格
+        table.render({
+            elem: '#data-table',
+            even: true,
+            page: false
+        });
+        
+        // 渲染分页
+        laypage.render({
+            elem: 'page',
+            count: {{ topics.total }},
+            limit: {{ topics.per_page }},
+            curr: {{ topics.page }},
+            layout: ['prev', 'page', 'next', 'count', 'skip'],
+            jump: function(obj, first) {
+                if(!first) {
+                    window.location.href = '/data/warehouse?page=' + obj.curr;
+                }
+            }
+        });
+        
+        // 全选/取消全选
+        form.on('checkbox(selectAll)', function(data) {
+            var checkboxes = $(":checkbox[name='selectItem']");
+            checkboxes.prop("checked", data.elem.checked);
+            form.render('checkbox');
+        });
+        
+        // 编辑按钮点击事件
+        $('.edit-btn').on('click', function() {
+            var id = $(this).data('id');
+            // 获取当前行数据
+            var row = $(this).closest('tr');
+            var title = row.find('td:nth-child(3)').text().trim();
+            var content = row.find('td:nth-child(4)').text().trim();
+            var source = row.find('td:nth-child(5)').text().trim();
+            var publishedAt = row.find('td:nth-child(6)').text().trim();
+            var url = row.find('td:nth-child(3) a').attr('href') || '';
+            
+            // 设置表单值
+            $('#edit-id').val(id);
+            $('#edit-title').val(title);
+            $('#edit-content').val(content);
+            $('#edit-source').val(source);
+            $('#edit-url').val(url);
+            // 转换时间格式为datetime-local
+            var dt = new Date(publishedAt);
+            var localTime = dt.toISOString().slice(0, 16);
+            $('#edit-published-at').val(localTime);
+            
+            // 打开弹窗
+            layer.open({
+                type: 1,
+                title: '编辑数据',
+                area: ['800px', '550px'],
+                content: $('#edit-form'),
+                success: function(layero, index) {
+                    form.render();
+                }
+            });
+        });
+        
+        // 取消编辑
+        $('#cancel-edit').on('click', function() {
+            layer.closeAll('page');
+        });
+        
+        // 保存编辑
+        form.on('submit(save-edit)', function(data) {
+            var id = $('#edit-id').val();
+            $.ajax({
+                url: '/data/warehouse/' + id,
+                type: 'PUT',
+                data: data.field,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        layer.msg('保存成功！', {icon: 6});
+                        layer.closeAll('page');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        layer.msg(res.msg, {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('保存失败，请重试！', {icon: 5});
+                }
+            });
+            return false;
+        });
+        
+        // 删除按钮点击事件
+        $('.delete-btn').on('click', function() {
+            var id = $(this).data('id');
+            layer.confirm('确定要删除这条数据吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                $.ajax({
+                    url: '/data/warehouse/' + id,
+                    type: 'DELETE',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('删除成功！', {icon: 6});
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            layer.msg(res.msg, {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('删除失败，请重试！', {icon: 5});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+        
+        // 批量删除
+        $('#batch-delete').on('click', function() {
+            var ids = [];
+            $(":checkbox[name='selectItem']:checked").each(function() {
+                ids.push($(this).val());
+            });
+            if (ids.length === 0) {
+                layer.msg('请选择要删除的数据！', {icon: 5});
+                return;
+            }
+            layer.confirm('确定要删除选中的' + ids.length + '条数据吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                $.ajax({
+                    url: '/data/warehouse/batch-delete',
+                    type: 'POST',
+                    data: {ids: ids},
+                    traditional: true,
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('删除成功！', {icon: 6});
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            layer.msg(res.msg, {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('删除失败，请重试！', {icon: 5});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+        
+        // AI分析按钮点击事件
+        $('#ai-analysis').on('click', function() {
+            var ids = [];
+            $(":checkbox[name='selectItem']:checked").each(function() {
+                ids.push($(this).val());
+            });
+            if (ids.length === 0) {
+                layer.msg('请选择要分析的数据！', {icon: 5});
+                return;
+            }
+            layer.confirm('确定要对选中的' + ids.length + '条数据进行AI解析分析吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                // 预留接口，后期实现AI分析功能
+                layer.msg('AI分析功能开发中，敬请期待！', {icon: 6});
+                layer.close(index);
+            });
+        });
+        
+        // 单条AI分析
+        $('.ai-btn').on('click', function() {
+            var id = $(this).data('id');
+            // 预留接口，后期实现AI分析功能
+            layer.msg('AI分析功能开发中，敬请期待！', {icon: 6});
+        });
+        
+        // 单条详细内容采集
+        $('.detail-collect-btn').on('click', function() {
+            var id = $(this).data('id');
+            layer.confirm('确定要对这条数据进行详细内容采集吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                // 发送AJAX请求
+                $.ajax({
+                    url: '/data/warehouse/detailed-collect/' + id,
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('详细内容采集成功！', {icon: 6});
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            layer.msg(res.msg, {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('采集失败，请重试！', {icon: 5});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+        
+        // 批量详细内容采集
+        $('#detailed-collection').on('click', function() {
+            var ids = [];
+            $(":checkbox[name='selectItem']:checked").each(function() {
+                ids.push($(this).val());
+            });
+            if (ids.length === 0) {
+                layer.msg('请选择要采集的数据！', {icon: 5});
+                return;
+            }
+            layer.confirm('确定要对选中的' + ids.length + '条数据进行详细内容采集吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                $.ajax({
+                    url: '/data/warehouse/batch-detailed-collect',
+                    type: 'POST',
+                    data: {ids: ids},
+                    traditional: true,
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('详细内容批量采集成功！', {icon: 6});
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            layer.msg(res.msg, {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('批量采集失败，请重试！', {icon: 5});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+        
+        // 搜索功能
+        $('#search-btn').on('click', function() {
+            var keyword = $('#search-keyword').val();
+            window.location.href = '/data/warehouse?keyword=' + encodeURIComponent(keyword);
+        });
+        
+        // 回车搜索
+        $('#search-keyword').on('keypress', function(e) {
+            if (e.which === 13) {
+                $('#search-btn').click();
+            }
+        });
+        
+        // 预览按钮点击事件
+        $('.preview-btn').on('click', function() {
+            var id = $(this).data('id');
+            
+            // 发送AJAX请求获取详细内容
+            $.ajax({
+                url: '/data/warehouse/detailed-content/' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        // 设置预览表单的值
+                        $('#preview-id').val(id);
+                        $('#preview-detailed-title').val(res.data.detailed_title || '');
+                        $('#preview-detailed-content').val(res.data.detailed_content || '');
+                        
+                        // 设置采集状态
+                        var collectedStatus = res.data.is_collected ? '已采集' : '未采集';
+                        $('#preview-collected-status').val(collectedStatus);
+                        
+                        // 设置采集时间
+                        var collectedAt = res.data.collected_at ? new Date(res.data.collected_at).toLocaleString() : '未采集';
+                        $('#preview-collected-at').val(collectedAt);
+                        
+                        // 设置错误信息
+                        $('#preview-collection-error').val(res.data.collection_error || '');
+                        
+                        // 打开预览弹窗
+                        layer.open({
+                            type: 1,
+                            title: '详细内容预览',
+                            area: ['900px', '700px'],
+                            content: $('#preview-form'),
+                            success: function(layero, index) {
+                                form.render();
+                            }
+                        });
+                    } else {
+                        layer.msg(res.msg || '获取详细内容失败', {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('获取详细内容失败，请重试！', {icon: 5});
+                }
+            });
+        });
+        
+        // 关闭预览
+        $('#cancel-preview').on('click', function() {
+            layer.closeAll('page');
+        });
+        
+    });
+</script>
+{% endblock %}

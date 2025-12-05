@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>政企智能舆情分析系统</title>
+    <!-- 引入layui CSS -->
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+    <!-- 自定义样式 -->
+    <style>
+        /* 仅保留必要的自定义样式，避免与layui默认样式冲突 */
+        .layui-logo {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .layui-body {
+            background-color: #f0f2f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-layout layui-layout-admin">
+        <!-- 顶部导航栏 -->
+        <div class="layui-header">
+            <div class="layui-logo">
+                <a href="/" style="color: #fff; text-decoration: none;">政企智能舆情分析系统</a>
+            </div>
+            
+            <!-- 顶部右侧导航 -->
+            <ul class="layui-nav layui-layout-right">
+                
+                <li class="layui-nav-item">
+                    <a href="javascript:;">
+                        admin
+                    </a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="javascript:;">个人信息</a></dd>
+                        <dd><a href="javascript:;">切换账号</a></dd>
+                        <hr class="layui-bg-gray">
+                        <dd><a href="/logout">退出登录</a></dd>
+                    </dl>
+                </li>
+                
+            </ul>
+        </div>
+        
+        <!-- 左侧菜单栏 -->
+        <div class="layui-side layui-bg-black">
+            <div class="layui-logo layui-bg-black" style="font-size: 18px; font-weight: bold;">
+                <a href="/" style="color: #fff; text-decoration: none;">政企智能舆情分析系统</a>
+            </div>
+            
+            <div class="layui-side-scroll">
+                <ul class="layui-nav layui-nav-tree" lay-filter="nav">
+                    <!-- 一级菜单：首页 -->
+                    <li class="layui-nav-item ">
+                        <a href="/">
+                            <i class="layui-icon layui-icon-home"></i> 首页
+                        </a>
+                    </li>
+                    
+                    <!-- 一级菜单：数据采集 -->
+                    <li class="layui-nav-item layui-nav-itemed">
+                        <a href="javascript:;">
+                            <i class="layui-icon layui-icon-list"></i> 数据采集
+                        </a>
+                        <dl class="layui-nav-child">
+                            <dd >
+                                <a href="/data/collection">
+                                    <i class="layui-icon layui-icon-download-circle"></i> 数据采集
+                                </a>
+                            </dd>
+                            <dd class="layui-this">
+                                <a href="/data/warehouse">
+                                    <i class="layui-icon layui-icon-folder"></i> 数据仓库管理
+                                </a>
+                            </dd>
+                            <dd >
+                                <a href="/admin/collection-rules">
+                                    <i class="layui-icon layui-icon-set"></i> 采集规则库
+                                </a>
+                            </dd>
+                        </dl>
+                    </li>
+                    
+
+                    
+                    <!-- 一级菜单：管理中心（仅管理员可见） -->
+                    
+                    <li class="layui-nav-item ">
+                        <a href="javascript:;">
+                            <i class="layui-icon layui-icon-set"></i> 管理中心
+                        </a>
+                        <dl class="layui-nav-child">
+                            <dd >
+                                <a href="/admin/users">
+                                    <i class="layui-icon layui-icon-user"></i> 用户管理
+                                </a>
+                            </dd>
+
+                            <dd >
+                                <a href="/admin/settings">
+                                    <i class="layui-icon layui-icon-set"></i> 系统设置
+                                </a>
+                            </dd>
+                        </dl>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 主内容区域 -->
+        <div class="layui-body">
+            <div style="padding: 20px;">
+            <!-- 页面标题 -->
+            <h1 style="margin-bottom: 20px; font-size: 24px;">
+                数据仓库管理
+            </h1>
+            
+            <!-- 内容区域 -->
+            
+
+<!-- 数据仓库操作区 -->
+<div class="layui-card">
+    <div class="layui-card-header">
+        <div class="layui-btn-group">
+            <button class="layui-btn layui-btn-primary" id="batch-delete">批量删除</button>
+            <button class="layui-btn layui-btn-normal" id="ai-analysis">AI解析分析</button>
+            <button class="layui-btn layui-btn-success" id="detailed-collection">详细内容采集</button>
+        </div>
+        <div class="layui-input-inline" style="float: right;">
+            <input type="text" name="keyword" placeholder="搜索标题" autocomplete="off" class="layui-input" id="search-keyword">
+        </div>
+        <button class="layui-btn layui-btn-search" style="float: right; margin-right: 10px;" id="search-btn">搜索</button>
+    </div>
+    <div class="layui-card-body">
+        
+        <!-- 数据列表 -->
+        <table class="layui-table" lay-filter="data-table" id="data-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" name="selectAll" lay-skin="primary" lay-filter="selectAll"></th>
+                    <th>ID</th>
+                    <th>标题</th>
+                    <th>内容</th>
+                    <th>来源</th>
+                    <th>发布时间</th>
+                    <th>采集时间</th>
+                    <th>采集状态</th>
+                    <th>失败原因</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr data-id="1">
+                    <td><input type="checkbox" name="selectItem" lay-skin="primary" value="1"></td>
+                    <td>1</td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="https://www.news.cn/20251128/5f0ee6c914b94da5917f1c7436cc8123/c.html" target="_blank">公文抄袭，病根不止于“写作”</a>
+                    </td>
+                    <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">无内容</td>
+                    <td>新华网</td>
+                    <td>2025-12-05 11:18:58</td>
+                    <td>2025-12-05 03:18:58</td>
+                    <td>
+                        
+                            <span style="color: gray;">未采集</span>
+                        
+                    </td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        
+                            - 
+                        
+                    </td>
+                    <td>
+                        <button class="layui-btn layui-btn-xs layui-btn-normal edit-btn" data-id="1">编辑</button>
+                        <button class="layui-btn layui-btn-xs layui-btn-danger delete-btn" data-id="1">删除</button>
+                        <button class="layui-btn layui-btn-xs layui-btn-warm ai-btn" data-id="1">AI分析</button>
+                        <button class="layui-btn layui-btn-xs layui-btn-success detail-collect-btn" data-id="1">详细采集</button>
+                        <button class="layui-btn layui-btn-xs layui-btn-info preview-btn" data-id="1">预览</button>
+                    </td>
+                </tr>
+                
+            </tbody>
+        </table>
+        
+        <!-- 分页控件 -->
+        <div id="page" class="layui-box layui-laypage layui-laypage-default"></div>
+    </div>
+</div>
+
+<!-- 编辑表单弹窗 -->
+<div id="edit-form" style="display: none;">
+    <form class="layui-form" id="topic-form">
+        <input type="hidden" name="id" id="edit-id">
+        <div class="layui-form-item">
+            <label class="layui-form-label">标题</label>
+            <div class="layui-input-block">
+                <input type="text" name="title" required  lay-verify="required" placeholder="请输入标题" autocomplete="off" class="layui-input" id="edit-title">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">内容</label>
+            <div class="layui-input-block">
+                <textarea name="content" required lay-verify="required" placeholder="请输入内容" class="layui-textarea" id="edit-content" rows="6"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">来源</label>
+            <div class="layui-input-block">
+                <input type="text" name="source" placeholder="请输入来源" autocomplete="off" class="layui-input" id="edit-source">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">URL</label>
+            <div class="layui-input-block">
+                <input type="text" name="url" placeholder="请输入URL" autocomplete="off" class="layui-input" id="edit-url">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">发布时间</label>
+            <div class="layui-input-block">
+                <input type="datetime-local" name="published_at" class="layui-input" id="edit-published-at">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn layui-btn-primary" id="cancel-edit">取消</button>
+                <button type="submit" class="layui-btn" lay-submit lay-filter="save-edit">保存</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 详细内容预览弹窗 -->
+<div id="preview-form" style="display: none;">
+    <div class="layui-form" id="preview-topic-form">
+        <input type="hidden" name="id" id="preview-id">
+        <div class="layui-form-item">
+            <label class="layui-form-label">详细标题</label>
+            <div class="layui-input-block">
+                <input type="text" name="detailed_title" disabled placeholder="无详细标题" class="layui-input" id="preview-detailed-title">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">详细内容</label>
+            <div class="layui-input-block">
+                <textarea name="detailed_content" disabled placeholder="无详细内容" class="layui-textarea" id="preview-detailed-content" rows="12"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">采集状态</label>
+            <div class="layui-input-block">
+                <input type="text" name="collected_status" disabled placeholder="未知" class="layui-input" id="preview-collected-status">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">采集时间</label>
+            <div class="layui-input-block">
+                <input type="text" name="collected_at" disabled placeholder="未采集" class="layui-input" id="preview-collected-at">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">错误信息</label>
+            <div class="layui-input-block">
+                <textarea name="collection_error" disabled placeholder="无错误信息" class="layui-textarea" id="preview-collection-error" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button type="button" class="layui-btn layui-btn-primary" id="cancel-preview">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+            </div>
+        </div>
+    </div>
+    
+    <!-- 引入jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- 引入layui JS -->
+    <script src="/static/layui/layui.js"></script>
+    
+    <!-- 初始化layui组件 -->
+    <script>
+        layui.use(['element', 'layer'], function() {
+            var element = layui.element;
+            var layer = layui.layer;
+            
+            // 监听导航点击
+            element.on('nav(nav)', function(elem) {
+                console.log(elem.text());
+            });
+        });
+    </script>
+    
+    <!-- 页面自定义脚本 -->
+    
+<script>
+    layui.use(['table', 'form', 'layer', 'laypage'], function() {
+        var table = layui.table;
+        var form = layui.form;
+        var layer = layui.layer;
+        var laypage = layui.laypage;
+        
+        // 渲染表格
+        table.render({
+            elem: '#data-table',
+            even: true,
+            page: false
+        });
+        
+        // 渲染分页
+        laypage.render({
+            elem: 'page',
+            count: 1,
+            limit: 10,
+            curr: 1,
+            layout: ['prev', 'page', 'next', 'count', 'skip'],
+            jump: function(obj, first) {
+                if(!first) {
+                    window.location.href = '/data/warehouse?page=' + obj.curr;
+                }
+            }
+        });
+        
+        // 全选/取消全选
+        form.on('checkbox(selectAll)', function(data) {
+            var checkboxes = $(":checkbox[name='selectItem']");
+            checkboxes.prop("checked", data.elem.checked);
+            form.render('checkbox');
+        });
+        
+        // 编辑按钮点击事件
+        $('.edit-btn').on('click', function() {
+            var id = $(this).data('id');
+            // 获取当前行数据
+            var row = $(this).closest('tr');
+            var title = row.find('td:nth-child(3)').text().trim();
+            var content = row.find('td:nth-child(4)').text().trim();
+            var source = row.find('td:nth-child(5)').text().trim();
+            var publishedAt = row.find('td:nth-child(6)').text().trim();
+            var url = row.find('td:nth-child(3) a').attr('href') || '';
+            
+            // 设置表单值
+            $('#edit-id').val(id);
+            $('#edit-title').val(title);
+            $('#edit-content').val(content);
+            $('#edit-source').val(source);
+            $('#edit-url').val(url);
+            // 转换时间格式为datetime-local
+            var dt = new Date(publishedAt);
+            var localTime = dt.toISOString().slice(0, 16);
+            $('#edit-published-at').val(localTime);
+            
+            // 打开弹窗
+            layer.open({
+                type: 1,
+                title: '编辑数据',
+                area: ['800px', '550px'],
+                content: $('#edit-form'),
+                success: function(layero, index) {
+                    form.render();
+                }
+            });
+        });
+        
+        // 取消编辑
+        $('#cancel-edit').on('click', function() {
+            layer.closeAll('page');
+        });
+        
+        // 保存编辑
+        form.on('submit(save-edit)', function(data) {
+            var id = $('#edit-id').val();
+            $.ajax({
+                url: '/data/warehouse/' + id,
+                type: 'PUT',
+                data: data.field,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        layer.msg('保存成功！', {icon: 6});
+                        layer.closeAll('page');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        layer.msg(res.msg, {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('保存失败，请重试！', {icon: 5});
+                }
+            });
+            return false;
+        });
+        
+        // 删除按钮点击事件
+        $('.delete-btn').on('click', function() {
+            var id = $(this).data('id');
+            layer.confirm('确定要删除这条数据吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                $.ajax({
+                    url: '/data/warehouse/' + id,
+                    type: 'DELETE',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('删除成功！', {icon: 6});
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            layer.msg(res.msg, {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('删除失败，请重试！', {icon: 5});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+        
+        // 批量删除
+        $('#batch-delete').on('click', function() {
+            var ids = [];
+            $(":checkbox[name='selectItem']:checked").each(function() {
+                ids.push($(this).val());
+            });
+            if (ids.length === 0) {
+                layer.msg('请选择要删除的数据！', {icon: 5});
+                return;
+            }
+            layer.confirm('确定要删除选中的' + ids.length + '条数据吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                $.ajax({
+                    url: '/data/warehouse/batch-delete',
+                    type: 'POST',
+                    data: {ids: ids},
+                    traditional: true,
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('删除成功！', {icon: 6});
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            layer.msg(res.msg, {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('删除失败，请重试！', {icon: 5});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+        
+        // AI分析按钮点击事件
+        $('#ai-analysis').on('click', function() {
+            var ids = [];
+            $(":checkbox[name='selectItem']:checked").each(function() {
+                ids.push($(this).val());
+            });
+            if (ids.length === 0) {
+                layer.msg('请选择要分析的数据！', {icon: 5});
+                return;
+            }
+            layer.confirm('确定要对选中的' + ids.length + '条数据进行AI解析分析吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                // 预留接口，后期实现AI分析功能
+                layer.msg('AI分析功能开发中，敬请期待！', {icon: 6});
+                layer.close(index);
+            });
+        });
+        
+        // 单条AI分析
+        $('.ai-btn').on('click', function() {
+            var id = $(this).data('id');
+            // 预留接口，后期实现AI分析功能
+            layer.msg('AI分析功能开发中，敬请期待！', {icon: 6});
+        });
+        
+        // 单条详细内容采集
+        $('.detail-collect-btn').on('click', function() {
+            var id = $(this).data('id');
+            layer.confirm('确定要对这条数据进行详细内容采集吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                // 发送AJAX请求
+                $.ajax({
+                    url: '/data/warehouse/detailed-collect/' + id,
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('详细内容采集成功！', {icon: 6});
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            layer.msg(res.msg, {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('采集失败，请重试！', {icon: 5});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+        
+        // 批量详细内容采集
+        $('#detailed-collection').on('click', function() {
+            var ids = [];
+            $(":checkbox[name='selectItem']:checked").each(function() {
+                ids.push($(this).val());
+            });
+            if (ids.length === 0) {
+                layer.msg('请选择要采集的数据！', {icon: 5});
+                return;
+            }
+            layer.confirm('确定要对选中的' + ids.length + '条数据进行详细内容采集吗？', {
+                btn: ['确定', '取消'],
+                icon: 3
+            }, function(index) {
+                $.ajax({
+                    url: '/data/warehouse/batch-detailed-collect',
+                    type: 'POST',
+                    data: {ids: ids},
+                    traditional: true,
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('详细内容批量采集成功！', {icon: 6});
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            layer.msg(res.msg, {icon: 5});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('批量采集失败，请重试！', {icon: 5});
+                    }
+                });
+                layer.close(index);
+            });
+        });
+        
+        // 搜索功能
+        $('#search-btn').on('click', function() {
+            var keyword = $('#search-keyword').val();
+            window.location.href = '/data/warehouse?keyword=' + encodeURIComponent(keyword);
+        });
+        
+        // 回车搜索
+        $('#search-keyword').on('keypress', function(e) {
+            if (e.which === 13) {
+                $('#search-btn').click();
+            }
+        });
+        
+        // 预览按钮点击事件
+        $('.preview-btn').on('click', function() {
+            var id = $(this).data('id');
+            
+            // 发送AJAX请求获取详细内容
+            $.ajax({
+                url: '/data/warehouse/detailed-content/' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.code === 0) {
+                        // 设置预览表单的值
+                        $('#preview-id').val(id);
+                        $('#preview-detailed-title').val(res.data.detailed_title || '');
+                        $('#preview-detailed-content').val(res.data.detailed_content || '');
+                        
+                        // 设置采集状态
+                        var collectedStatus = res.data.is_collected ? '已采集' : '未采集';
+                        $('#preview-collected-status').val(collectedStatus);
+                        
+                        // 设置采集时间
+                        var collectedAt = res.data.collected_at ? new Date(res.data.collected_at).toLocaleString() : '未采集';
+                        $('#preview-collected-at').val(collectedAt);
+                        
+                        // 设置错误信息
+                        $('#preview-collection-error').val(res.data.collection_error || '');
+                        
+                        // 打开预览弹窗
+                        layer.open({
+                            type: 1,
+                            title: '详细内容预览',
+                            area: ['900px', '700px'],
+                            content: $('#preview-form'),
+                            success: function(layero, index) {
+                                form.render();
+                            }
+                        });
+                    } else {
+                        layer.msg(res.msg || '获取详细内容失败', {icon: 5});
+                    }
+                },
+                error: function() {
+                    layer.msg('获取详细内容失败，请重试！', {icon: 5});
+                }
+            });
+        });
+        
+        // 关闭预览
+        $('#cancel-preview').on('click', function() {
+            layer.closeAll('page');
+        });
+        
+    });
+</script>
+
+</body>
+</html>

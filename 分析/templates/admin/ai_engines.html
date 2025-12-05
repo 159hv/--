@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+
+{% block title %}AI引擎管理 - {{ app_name }}{% endblock %}
+
+{% block page_title %}AI引擎管理{% endblock %}
+
+{% block content %}
+<div class="layui-container">
+    <div class="layui-row">
+        <div class="layui-col-lg12">
+            <h2 class="layui-mt-4 layui-text-center">AI引擎管理</h2>
+            
+            <!-- 搜索和添加按钮 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-body">
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <div class="layui-input-inline">
+                                <input type="text" name="search_keyword" placeholder="请输入服务商名称或模型名称" autocomplete="off" class="layui-input" id="search_keyword">
+                            </div>
+                            <button class="layui-btn layui-btn-primary" id="search-btn">
+                                <i class="layui-icon layui-icon-search"></i> 搜索
+                            </button>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn layui-btn-normal" id="add-engine-btn">
+                                <i class="layui-icon layui-icon-add-circle"></i> 添加AI引擎
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI引擎橱窗列表 -->
+            <div class="layui-row layui-col-space20 layui-mt-4" id="engines-showcase">
+                {% for engine in engines.items %}
+                <div class="layui-col-md4">
+                    <div class="layui-card ai-engine-card">
+                        <div class="layui-card-header">
+                            <div class="engine-header">
+                                <div class="engine-title">{{ engine.provider_name }}</div>
+                                <div class="engine-status">
+                                    <span class="layui-badge {% if engine.status %}layui-badge-success{% else %}layui-badge-danger{% endif %}">
+                                        {% if engine.status %}启用{% else %}禁用{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="layui-card-body">
+                            <div class="engine-info">
+                                <div class="engine-item engine-model">
+                                    <i class="layui-icon layui-icon-code"></i>
+                                    <div class="engine-item-label">模型名称</div>
+                                    <div class="engine-item-value">{{ engine.model_name }}</div>
+                                </div>
+                                <div class="engine-item engine-url">
+                                    <i class="layui-icon layui-icon-link"></i>
+                                    <div class="engine-item-label">API URL</div>
+                                    <div class="engine-item-value">{{ engine.api_url }}</div>
+                                </div>
+                                {% if engine.description %}
+                                <div class="engine-item engine-description">
+                                    <i class="layui-icon layui-icon-tips"></i>
+                                    <div class="engine-item-label">描述</div>
+                                    <div class="engine-item-value">{{ engine.description }}</div>
+                                </div>
+                                {% endif %}
+                                <div class="engine-item engine-time">
+                                    <i class="layui-icon layui-icon-clock"></i>
+                                    <div class="engine-item-label">更新时间</div>
+                                    <div class="engine-item-value">{{ engine.updated_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                                </div>
+                            </div>
+                            <div class="engine-actions">
+                                <button class="layui-btn layui-btn-xs layui-btn-primary" onclick="viewEngine({{ engine.id }})"><i class="layui-icon layui-icon-view"></i> 查看</button>
+                                <button class="layui-btn layui-btn-xs" onclick="editEngine({{ engine.id }})"><i class="layui-icon layui-icon-edit"></i> 编辑</button>
+                                <button class="layui-btn layui-btn-xs layui-btn-danger" onclick="deleteEngine({{ engine.id }})"><i class="layui-icon layui-icon-delete"></i> 删除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- 分页 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-body">
+                    <div id="pagination" style="text-align: center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加AI引擎弹窗 -->
+<div id="add-engine-modal" style="display: none;">
+    <form class="layui-form" id="add-engine-form" lay-filter="add-engine-form">
+        <div class="layui-form-item">
+            <label class="layui-form-label">服务商名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="provider_name" required lay-verify="required" placeholder="请输入服务商名称" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">API URL</label>
+            <div class="layui-input-block">
+                <input type="text" name="api_url" required lay-verify="required" placeholder="请输入API URL" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">API Key</label>
+            <div class="layui-input-block">
+                <input type="password" name="api_key" required lay-verify="required" placeholder="请输入API Key" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">模型名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="model_name" required lay-verify="required" placeholder="请输入模型名称" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">描述</label>
+            <div class="layui-input-block">
+                <textarea placeholder="请输入引擎描述" class="layui-textarea" name="description"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">状态</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="status" lay-skin="switch" lay-text="启用|禁用" checked>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 编辑AI引擎弹窗 -->
+<div id="edit-engine-modal" style="display: none;">
+    <form class="layui-form" lay-filter="edit-engine-form">
+        <input type="hidden" name="engine_id" id="edit-engine-id">
+        <div class="layui-form-item">
+            <label class="layui-form-label">服务商名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="provider_name" required lay-verify="required" placeholder="请输入服务商名称" autocomplete="off" class="layui-input" id="edit-provider_name">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">API URL</label>
+            <div class="layui-input-block">
+                <input type="text" name="api_url" required lay-verify="required" placeholder="请输入API URL" autocomplete="off" class="layui-input" id="edit-api_url">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">API Key</label>
+            <div class="layui-input-block">
+                <input type="password" name="api_key" required lay-verify="required" placeholder="请输入API Key" autocomplete="off" class="layui-input" id="edit-api_key">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">模型名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="model_name" required lay-verify="required" placeholder="请输入模型名称" autocomplete="off" class="layui-input" id="edit-model_name">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">描述</label>
+            <div class="layui-input-block">
+                <textarea placeholder="请输入引擎描述" class="layui-textarea" name="description" id="edit-description"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">状态</label>
+            <div class="layui-input-block">
+                <input type="checkbox" name="status" lay-skin="switch" lay-text="启用|禁用" id="edit-status">
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* AI引擎卡片样式 */
+.ai-engine-card {
+    height: 100%;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+
+.ai-engine-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.engine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.engine-title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.engine-status {
+    margin-left: 10px;
+}
+
+.ai-engine-card {
+    height: 100%;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+}
+
+.ai-engine-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    border-color: #e0e0e0;
+}
+
+.engine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.engine-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
+}
+
+.engine-status {
+    margin-left: 10px;
+}
+
+.engine-info {
+    margin-bottom: 20px;
+}
+
+.engine-item {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.engine-item .layui-icon {
+    margin-right: 8px;
+    color: #666;
+    font-size: 14px;
+}
+
+.engine-item-label {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+
+.engine-item-value {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+    word-break: break-all;
+}
+
+.engine-model .engine-item-value {
+    color: #333;
+    font-weight: 500;
+}
+
+.engine-url .engine-item-value {
+    font-size: 13px;
+}
+
+.engine-description .engine-item-value {
+    font-size: 13px;
+    color: #777;
+}
+
+.engine-time .engine-item-value {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.engine-actions {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 15px;
+    border-top: 1px solid #f5f5f5;
+}
+
+.engine-actions .layui-btn {
+    font-size: 12px;
+    padding: 0 12px;
+    height: 26px;
+    line-height: 26px;
+}
+
+/* 图标样式 */
+.layui-icon {
+    margin-right: 4px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 渲染橱窗列表和分页
+layui.use(['layer', 'form', 'laypage'], function() {
+    var layer = layui.layer;
+    var form = layui.form;
+    var laypage = layui.laypage;
+    
+    // 初始化表单
+    form.render();
+    
+    // 搜索按钮点击事件
+    $('#search-btn').on('click', function() {
+        var keyword = $('#search_keyword').val();
+        window.location.href = '/admin/ai-engines?keyword=' + encodeURIComponent(keyword);
+    });
+    
+    // 添加AI引擎按钮点击事件
+    $('#add-engine-btn').on('click', function() {
+        layer.open({
+            type: 1,
+            title: '添加AI引擎',
+            area: ['600px', 'auto'],
+            content: $('#add-engine-modal'),
+            btn: ['保存', '取消'],
+            btn1: function(index, layero) {
+                // 获取模态框内的表单元素
+                var provider_name = $(layero).find('input[name="provider_name"]').val();
+                var api_url = $(layero).find('input[name="api_url"]').val();
+                var api_key = $(layero).find('input[name="api_key"]').val();
+                var model_name = $(layero).find('input[name="model_name"]').val();
+                var description = $(layero).find('textarea[name="description"]').val();
+                var status = $(layero).find('input[name="status"]').is(':checked') ? 'true' : 'false';
+                
+                // 表单数据
+                var formData = {
+                    provider_name: provider_name,
+                    api_url: api_url,
+                    api_key: api_key,
+                    model_name: model_name,
+                    description: description,
+                    status: status
+                };
+                
+                // 表单验证
+                if (!formData.provider_name || !formData.api_url || !formData.api_key || !formData.model_name) {
+                    layer.msg('服务商名称、API URL、API Key和模型名称不能为空', {icon: 2});
+                    return;
+                }
+                
+                // 提交表单
+                $.ajax({
+                    url: '/admin/ai-engine',
+                    type: 'POST',
+                    data: formData,
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg('添加成功！', {icon: 1});
+                            layer.close(index);
+                            // 刷新页面
+                            window.location.reload();
+                        } else {
+                            layer.msg('添加失败：' + res.msg, {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('添加失败，请稍后重试', {icon: 2});
+                    }
+                });
+            },
+            btn2: function(index, layero) {
+                layer.close(index);
+            }
+        });
+    });
+    
+    // 初始化分页
+    laypage.render({
+        elem: 'pagination',
+        count: {{ engines.total }},
+        limit: {{ engines.per_page }},
+        curr: {{ engines.page }},
+        layout: ['prev', 'page', 'next', 'skip', 'count'],
+        jump: function(obj, first) {
+            if (!first) {
+                var keyword = $('#search_keyword').val();
+                var url = '/admin/ai-engines?page=' + obj.curr;
+                if (keyword) {
+                    url += '&keyword=' + encodeURIComponent(keyword);
+                }
+                window.location.href = url;
+            }
+        }
+    });
+});
+
+// 查看AI引擎
+function viewEngine(id) {
+    $.ajax({
+        url: '/admin/ai-engine/' + id,
+        type: 'GET',
+        success: function(res) {
+            if (res.code === 0) {
+                var data = res.data;
+                layer.open({
+                    type: 1,
+                    title: '查看AI引擎',
+                    area: ['600px', 'auto'],
+                    content: '<div class="layui-form" style="padding: 20px;">' +
+                            '<div class="layui-form-item">' +
+                                '<label class="layui-form-label">服务商名称</label>' +
+                                '<div class="layui-input-block"><input type="text" value="' + data.provider_name + '" class="layui-input" disabled></div>' +
+                            '</div>' +
+                            '<div class="layui-form-item">' +
+                                '<label class="layui-form-label">API URL</label>' +
+                                '<div class="layui-input-block"><input type="text" value="' + data.api_url + '" class="layui-input" disabled></div>' +
+                            '</div>' +
+                            '<div class="layui-form-item">' +
+                                '<label class="layui-form-label">API Key</label>' +
+                                '<div class="layui-input-block"><input type="password" value="' + data.api_key + '" class="layui-input" disabled></div>' +
+                            '</div>' +
+                            '<div class="layui-form-item">' +
+                                '<label class="layui-form-label">模型名称</label>' +
+                                '<div class="layui-input-block"><input type="text" value="' + data.model_name + '" class="layui-input" disabled></div>' +
+                            '</div>' +
+                            '<div class="layui-form-item">' +
+                                '<label class="layui-form-label">描述</label>' +
+                                '<div class="layui-input-block"><textarea class="layui-textarea" disabled>' + (data.description || '') + '</textarea></div>' +
+                            '</div>' +
+                            '<div class="layui-form-item">' +
+                                '<label class="layui-form-label">状态</label>' +
+                                '<div class="layui-input-block"><span class="layui-badge ' + (data.status ? 'layui-badge-success' : 'layui-badge-danger') + '">' + (data.status ? '启用' : '禁用') + '</span></div>' +
+                            '</div>' +
+                            '</div>',
+                    btn: ['关闭'],
+                    btn1: function(index, layero) {
+                        layer.close(index);
+                    }
+                });
+            } else {
+                layer.msg('获取引擎信息失败：' + res.msg, {icon: 2});
+            }
+        },
+        error: function() {
+            layer.msg('获取引擎信息失败，请稍后重试', {icon: 2});
+        }
+    });
+}
+
+// 编辑AI引擎
+function editEngine(id) {
+    $.ajax({
+        url: '/admin/ai-engine/' + id,
+        type: 'GET',
+        success: function(res) {
+            if (res.code === 0) {
+                var data = res.data;
+                
+                // 填充表单数据
+                $('#edit-engine-id').val(data.id);
+                $('#edit-provider_name').val(data.provider_name);
+                $('#edit-api_url').val(data.api_url);
+                $('#edit-api_key').val(data.api_key);
+                $('#edit-model_name').val(data.model_name);
+                $('#edit-description').val(data.description);
+                
+                // 设置状态开关
+                if (data.status) {
+                    $('#edit-status').prop('checked', true);
+                } else {
+                    $('#edit-status').prop('checked', false);
+                }
+                
+                // 重新渲染表单
+                layui.form.render();
+                
+                layer.open({
+                    type: 1,
+                    title: '编辑AI引擎',
+                    area: ['600px', 'auto'],
+                    content: $('#edit-engine-modal'),
+                    btn: ['保存', '取消'],
+                    btn1: function(index, layero) {
+                        // 提交表单
+                        var formData = {
+                            provider_name: $('#edit-provider_name').val(),
+                            api_url: $('#edit-api_url').val(),
+                            api_key: $('#edit-api_key').val(),
+                            model_name: $('#edit-model_name').val(),
+                            description: $('#edit-description').val(),
+                            status: $('#edit-status').is(':checked') ? 'true' : 'false'
+                        };
+                        
+                        $.ajax({
+                            url: '/admin/ai-engine/' + id,
+                            type: 'PUT',
+                            data: formData,
+                            success: function(res) {
+                                if (res.code === 0) {
+                                    layer.msg('更新成功！', {icon: 1});
+                                    layer.close(index);
+                                    // 刷新页面
+                                    window.location.reload();
+                                } else {
+                                    layer.msg('更新失败：' + res.msg, {icon: 2});
+                                }
+                            },
+                            error: function() {
+                                layer.msg('更新失败，请稍后重试', {icon: 2});
+                            }
+                        });
+                    },
+                    btn2: function(index, layero) {
+                        layer.close(index);
+                    }
+                });
+            } else {
+                layer.msg('获取引擎信息失败：' + res.msg, {icon: 2});
+            }
+        },
+        error: function() {
+            layer.msg('获取引擎信息失败，请稍后重试', {icon: 2});
+        }
+    });
+}
+
+// 删除AI引擎
+function deleteEngine(id) {
+    layer.confirm('确定要删除这个AI引擎吗？', {icon: 3, title: '删除确认'}, function(index) {
+        $.ajax({
+            url: '/admin/ai-engine/' + id,
+            type: 'DELETE',
+            success: function(res) {
+                if (res.code === 0) {
+                    layer.msg('删除成功！', {icon: 1});
+                    // 刷新页面
+                    window.location.reload();
+                } else {
+                    layer.msg('删除失败：' + res.msg, {icon: 2});
+                }
+            },
+            error: function() {
+                layer.msg('删除失败，请稍后重试', {icon: 2});
+            }
+        });
+        layer.close(index);
+    });
+}
+</script>
+{% endblock %}

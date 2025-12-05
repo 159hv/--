@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+
+{% block title %}采集规则库 - {{ app_name }}{% endblock %}
+
+{% block page_title %}采集规则库{% endblock %}
+
+{% block content %}
+<div class="layui-container">
+    <div class="layui-row">
+        <div class="layui-col-lg12">
+            <h2 class="layui-mt-4 layui-text-center">采集规则库</h2>
+            
+            <!-- 搜索和添加按钮 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-body">
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <div class="layui-input-inline">
+                                <input type="text" name="search_keyword" placeholder="请输入站点名称或URL" autocomplete="off" class="layui-input" id="search_keyword">
+                            </div>
+                            <button class="layui-btn layui-btn-primary" id="search-btn">
+                                <i class="layui-icon layui-icon-search"></i> 搜索
+                            </button>
+                        </div>
+                        <div class="layui-inline">
+                            <button class="layui-btn layui-btn-normal" id="add-rule-btn">
+                    <i class="layui-icon layui-icon-add-circle"></i> 添加采集规则
+                </button>
+                <!-- 测试按钮 -->
+                <button class="layui-btn layui-btn-primary" id="test-btn">
+                    <i class="layui-icon layui-icon-test"></i> 测试按钮
+                </button>
+                <button class="layui-btn layui-btn-success" id="detailed-collection">详细内容采集</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 采集规则列表表格 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-body">
+                    <table class="layui-hide" id="rules-table" lay-filter="rules-table"></table>
+                    
+                    <!-- 操作栏模板 -->
+                    <script type="text/html" id="rule-bar">
+                        <a class="layui-btn layui-btn-xs layui-btn-primary view-detail-btn" lay-event="view">
+                            <i class="layui-icon layui-icon-view"></i> 查看详情
+                        </a>
+                        <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+                        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="delete">删除</a>
+                    <a class="layui-btn layui-btn-xs layui-btn-success" lay-event="detail-collect">详细采集</a>
+                    </script>
+                </div>
+            </div>
+            
+            <!-- 分页 -->
+            <div class="layui-card layui-mt-4">
+                <div class="layui-card-body">
+                    <div id="pagination" style="text-align: center;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加规则弹窗 -->
+<div id="add-rule-modal" style="display: none;">
+    <form class="layui-form" id="add-rule-form" lay-filter="add-rule-form">
+        <div class="layui-form-item">
+            <label class="layui-form-label">站点名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="site_name" required lay-verify="required" placeholder="请输入站点名称" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">站点URL</label>
+            <div class="layui-input-block">
+                <input type="text" name="site_url" required lay-verify="required" placeholder="请输入站点URL" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">标题XPath</label>
+            <div class="layui-input-block">
+                <input type="text" name="title_xpath" required lay-verify="required" placeholder="请输入标题XPath" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">内容XPath</label>
+            <div class="layui-input-block">
+                <input type="text" name="content_xpath" required lay-verify="required" placeholder="请输入内容XPath" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">Request Headers</label>
+            <div class="layui-input-block">
+                <textarea placeholder="请输入Request Headers（JSON格式或原始格式）" class="layui-textarea" name="headers" id="add-headers">{}</textarea>
+                <div class="layui-input-inline layui-btn-container layui-mt-2">
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="parse-headers-btn">解析原始Headers</button>
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="clear-headers-btn">清空</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 编辑规则弹窗 -->
+<div id="edit-rule-modal" style="display: none;">
+    <form class="layui-form" lay-filter="edit-rule-form">
+        <input type="hidden" name="rule_id" id="edit-rule-id">
+        <div class="layui-form-item">
+            <label class="layui-form-label">站点名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="site_name" required lay-verify="required" placeholder="请输入站点名称" autocomplete="off" class="layui-input" id="edit-site_name">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">站点URL</label>
+            <div class="layui-input-block">
+                <input type="text" name="site_url" required lay-verify="required" placeholder="请输入站点URL" autocomplete="off" class="layui-input" id="edit-site_url">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">标题XPath</label>
+            <div class="layui-input-block">
+                <input type="text" name="title_xpath" required lay-verify="required" placeholder="请输入标题XPath" autocomplete="off" class="layui-input" id="edit-title_xpath">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">内容XPath</label>
+            <div class="layui-input-block">
+                <input type="text" name="content_xpath" required lay-verify="required" placeholder="请输入内容XPath" autocomplete="off" class="layui-input" id="edit-content_xpath">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">Request Headers</label>
+            <div class="layui-input-block">
+                <textarea placeholder="请输入Request Headers（JSON格式或原始格式）" class="layui-textarea" name="headers" id="edit-headers">{}</textarea>
+                <div class="layui-input-inline layui-btn-container layui-mt-2">
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="edit-parse-headers-btn">解析原始Headers</button>
+                    <button type="button" class="layui-btn layui-btn-sm layui-btn-primary" id="edit-clear-headers-btn">清空</button>
+                </div>
+            </div>
+        </div>
+    </form></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 渲染表格
+layui.use(['table', 'layer', 'form', 'laypage'], function() {
+    var table = layui.table;
+    var layer = layui.layer;
+    var form = layui.form;
+    var laypage = layui.laypage;
+    
+    // 初始化表单
+    form.render();
+    
+    // 调试信息：确认LayUI组件加载完成
+    console.log('LayUI components loaded');
+    
+    // 测试按钮点击事件
+    $('#test-btn').on('click', function() {
+        alert('测试按钮点击事件触发');
+        layer.msg('测试按钮点击成功', {icon: 1});
+        console.log('测试按钮点击事件触发');
+    });
+    
+    // 解析原始Headers为JSON格式的函数
+    function parseRawHeaders(rawHeaders) {
+        try {
+            // 移除首尾空白行
+            rawHeaders = rawHeaders.trim();
+            
+            // 按行分割
+            var lines = rawHeaders.split('\n');
+            
+            var headers = {};
+            
+            // 处理每一行，正确解析"键: 值"格式
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (!line) continue; // 跳过空行
+                
+                // 查找第一个冒号的位置
+                var colonIndex = line.indexOf(':');
+                if (colonIndex === -1) {
+                    throw new Error("Headers格式错误：第" + (i+1) + "行缺少冒号分隔符");
+                }
+                
+                // 提取键和值
+                var key = line.substring(0, colonIndex).trim();
+                var value = line.substring(colonIndex + 1).trim();
+                
+                // 验证键名是否合法
+                if (!/^[A-Za-z0-9\-]+$/.test(key)) {
+                    throw new Error("Headers格式错误：第" + (i+1) + "行的键名包含非法字符");
+                }
+                
+                headers[key] = value;
+            }
+            
+            return JSON.stringify(headers, null, 2);
+        } catch (e) {
+            layer.msg('解析失败：' + e.message, {icon: 2});
+            return null;
+        }
+    }
+    
+    // 添加规则弹窗的解析按钮点击事件
+    $('#parse-headers-btn').on('click', function() {
+        var rawHeaders = $('#add-headers').val().trim();
+        if (!rawHeaders) {
+            layer.msg('请先输入原始Headers数据', {icon: 2});
+            return;
+        }
+        
+        var jsonHeaders = parseRawHeaders(rawHeaders);
+        if (jsonHeaders) {
+            $('#add-headers').val(jsonHeaders);
+            layer.msg('解析成功', {icon: 1});
+        }
+    });
+    
+    // 添加规则弹窗的清空按钮点击事件
+    $('#clear-headers-btn').on('click', function() {
+        $('#add-headers').val('{}');
+    });
+    
+    // 编辑规则弹窗的解析按钮点击事件
+    $('#edit-parse-headers-btn').on('click', function() {
+        var rawHeaders = $('#edit-headers').val().trim();
+        if (!rawHeaders) {
+            layer.msg('请先输入原始Headers数据', {icon: 2});
+            return;
+        }
+        
+        var jsonHeaders = parseRawHeaders(rawHeaders);
+        if (jsonHeaders) {
+            $('#edit-headers').val(jsonHeaders);
+            layer.msg('解析成功', {icon: 1});
+        }
+    });
+    
+    // 编辑规则弹窗的清空按钮点击事件
+    $('#edit-clear-headers-btn').on('click', function() {
+        $('#edit-headers').val('{}');
+    });
+    
+    // 初始渲染表格
+    var tableIns = table.render({
+        elem: '#rules-table',
+        data: [{% for rule in rules.items %} {
+            'id': {{ rule.id }},
+            'site_name': '{{ rule.site_name }}',
+            'site_url': '{{ rule.site_url }}',
+            'title_xpath': '{{ rule.title_xpath }}',
+            'content_xpath': '{{ rule.content_xpath }}',
+            'created_at': '{{ rule.created_at.strftime('%Y-%m-%d %H:%M:%S') }}',
+            'updated_at': '{{ rule.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}'
+        }{% if not loop.last %},{% endif %}{% endfor %}],
+        cols: [[
+            {field: 'site_name', title: '站点名称', width: 200},
+            {field: 'site_url', title: '站点URL', width: 300},
+            {field: 'title_xpath', title: '标题XPath', width: 200},
+            {field: 'content_xpath', title: '内容XPath', width: 200},
+            {field: 'created_at', title: '创建时间', width: 160},
+            {field: 'updated_at', title: '更新时间', width: 160},
+            {title: '操作', toolbar: '#rule-bar', width: 120}
+        ]],
+        page: false, // 关闭表格自带分页，使用自定义分页
+        height: 'full-200'
+    });
+    
+    // 渲染分页
+    laypage.render({
+        elem: 'pagination',
+        count: {{ rules.total }},
+        limit: {{ rules.per_page }},
+        curr: {{ rules.page }},
+        layout: ['prev', 'page', 'next', 'count', 'skip'],
+        jump: function(obj, first) {
+            if(!first) {
+                window.location.href = '/admin/collection-rules?page=' + obj.curr + '&keyword=' + $('#search_keyword').val();
+            }
+        }
+    });
+    
+    // 添加规则按钮点击事件
+    $(document).on('click', '#add-rule-btn', function() {
+        // 重置表单
+        $('#add-rule-form')[0].reset();
+        // 打开添加规则模态框
+        layer.open({
+            type: 1,
+            title: '添加采集规则',
+            area: ['600px', '450px'],
+            content: $('#add-rule-modal'),
+            btn: ['保存', '取消'],
+            btn1: function(index, layero) {
+                // 验证表单
+                var formData = form.val('add-rule-form');
+                
+                // 简单验证必要字段
+                if (!formData.site_name || !formData.site_url || !formData.title_xpath || !formData.content_xpath) {
+                    layer.msg('请填写所有必填字段', {icon: 2});
+                    return false;
+                }
+                
+                // 尝试解析headers
+                try {
+                    if (formData.headers) {
+                        formData.request_headers = JSON.parse(formData.headers);
+                    } else {
+                        formData.request_headers = {};
+                    }
+                } catch (e) {
+                    layer.msg('Headers格式错误，必须是有效的JSON', {icon: 2});
+                    return false;
+                }
+                
+                // 提交表单
+                $.ajax({
+                    url: '/admin/collection-rule',
+                    type: 'POST',
+                    data: JSON.stringify(formData),
+                    contentType: 'application/json',
+                    success: function(res) {
+                        if(res.code === 0) {
+                            layer.msg(res.msg, {icon: 1});
+                            layer.close(index);
+                            // 刷新页面
+                            window.location.reload();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('添加失败，请重试', {icon: 2});
+                    }
+                });
+            }
+        });
+    });
+    
+    // 编辑规则
+    table.on('tool(rules-table)', function(obj) {
+        var data = obj.data;
+        if(obj.event === 'view') {
+            // 查看详情 - 跳转到采集新闻的网页
+            window.open('/data-collection?rule_id=' + data.id, '_blank');
+        } else if(obj.event === 'edit') {
+            // 获取规则详情
+            $.ajax({
+                url: '/admin/collection-rule/' + data.id,
+                type: 'GET',
+                success: function(res) {
+                    if(res.code === 0) {
+                        var ruleData = res.data;
+                        // 填充表单
+                        $('#edit-rule-id').val(ruleData.id);
+                        $('#edit-site_name').val(ruleData.site_name);
+                        $('#edit-site_url').val(ruleData.site_url);
+                        $('#edit-title_xpath').val(ruleData.title_xpath);
+                        $('#edit-content_xpath').val(ruleData.content_xpath);
+                        $('#edit-headers').val(JSON.stringify(ruleData.request_headers, null, 2));
+                        
+                        // 打开编辑弹窗
+                        layer.open({
+                            type: 1,
+                            title: '编辑采集规则',
+                            area: ['600px', '450px'],
+                            content: $('#edit-rule-modal'),
+                            btn: ['保存', '取消'],
+                            btn1: function(index, layero) {
+                                // 验证表单
+                                var formData = form.val('edit-rule-form');
+                                
+                                // 添加规则ID
+                                formData.rule_id = $('#edit-rule-id').val();
+                                
+                                // 简单验证必要字段
+                                if (!formData.site_name || !formData.site_url || !formData.title_xpath || !formData.content_xpath) {
+                                    layer.msg('请填写所有必填字段', {icon: 2});
+                                    return false;
+                                }
+                                
+                                // 提交表单
+                                $.ajax({
+                                    url: '/admin/collection-rule/' + formData.rule_id,
+                                    type: 'PUT',
+                                    data: formData,
+                                    success: function(res) {
+                                        if(res.code === 0) {
+                                            layer.msg(res.msg, {icon: 1});
+                                            layer.close(index);
+                                            // 刷新页面
+                                            window.location.reload();
+                                        } else {
+                                            layer.msg(res.msg, {icon: 2});
+                                        }
+                                    },
+                                    error: function() {
+                                        layer.msg('更新失败，请重试', {icon: 2});
+                                    }
+                                });
+                            }
+                        });
+                    } else {
+                        layer.msg(res.msg, {icon: 2});
+                    }
+                },
+                error: function() {
+                    layer.msg('获取规则失败，请重试', {icon: 2});
+                }
+            });
+        } else if(obj.event === 'delete') {
+            // 删除规则
+            layer.confirm('确定要删除这个采集规则吗？', function(index) {
+                $.ajax({
+                    url: '/admin/collection-rule/' + data.id,
+                    type: 'DELETE',
+                    success: function(res) {
+                        if(res.code === 0) {
+                            layer.msg(res.msg, {icon: 1});
+                            // 刷新页面
+                            window.location.reload();
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                    },
+                    error: function() {
+                        layer.msg('删除失败，请重试', {icon: 2});
+                    }
+                });
+                layer.close(index);
+            });
+        }
+    });
+    
+    // 搜索功能
+    $('#search-btn').on('click', function() {
+        var keyword = $('#search_keyword').val();
+        window.location.href = '/admin/collection-rules?keyword=' + keyword;
+    });
+    
+    // 回车键搜索
+    $('#search_keyword').on('keypress', function(e) {
+        if(e.which === 13) {
+            $('#search-btn').click();
+        }
+    });
+});
+</script>
+{% endblock %}

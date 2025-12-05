@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jQuery测试页面</title>
+    <!-- 使用CDN引入jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>jQuery测试页面</h1>
+    
+    <div id="test-result">
+        <p>jQuery测试结果将显示在这里...</p>
+    </div>
+    
+    <button id="test-button">测试jQuery</button>
+    
+    <script>
+        // 页面加载完成后执行
+        $(document).ready(function() {
+            $('#test-result').html('<p style="color: green;">jQuery已成功加载！</p>');
+            
+            // 绑定按钮点击事件
+            $('#test-button').click(function() {
+                $(this).text('按钮已点击！');
+                $('#test-result').append('<p>按钮点击事件正常工作！</p>');
+                
+                // 测试AJAX请求
+                $.ajax({
+                    url: '/data/collection',
+                    type: 'POST',
+                    data: {
+                        keyword: '测试',
+                        page: 1
+                    },
+                    success: function(res) {
+                        $('#test-result').append('<p style="color: blue;">AJAX请求成功！</p>');
+                        $('#test-result').append('<p>响应: ' + JSON.stringify(res) + '</p>');
+                    },
+                    error: function(xhr, status, error) {
+                        $('#test-result').append('<p style="color: red;">AJAX请求失败: ' + error + '</p>');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

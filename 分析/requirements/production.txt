@@ -1,0 +1,6 @@
+# Production dependencies
+-r base.txt
+
+# Additional production-specific dependencies
+gunicorn==21.2.0
+gevent==23.7.0

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试添加采集规则按钮</title>
+    <!-- 引入layui CSS -->
+    <link rel="stylesheet" href="static/layui/css/layui.css">
+</head>
+<body>
+    <button class="layui-btn layui-btn-normal" id="add-rule-btn">
+        <i class="layui-icon layui-icon-add-circle"></i> 添加采集规则
+    </button>
+
+    <!-- 添加规则弹窗 -->
+    <div id="add-rule-modal" style="display: none;">
+        <form class="layui-form" lay-filter="add-rule-form">
+            <div class="layui-form-item">
+                <label class="layui-form-label">站点名称</label>
+                <div class="layui-input-block">
+                    <input type="text" name="site_name" required lay-verify="required" placeholder="请输入站点名称" autocomplete="off" class="layui-input">
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 引入jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- 引入layui JS -->
+    <script src="static/layui/layui.js"></script>
+
+    <script>
+        console.log('jQuery版本:', $.fn.jquery);
+        
+        // 测试jQuery是否加载成功
+        if (typeof jQuery === 'undefined') {
+            console.error('jQuery加载失败');
+        } else {
+            console.log('jQuery加载成功');
+        }
+        
+        // 测试layui是否加载成功
+        if (typeof layui === 'undefined') {
+            console.error('LayUI加载失败');
+        } else {
+            console.log('LayUI加载成功');
+        }
+        
+        // 等待DOM加载完成
+        $(document).ready(function() {
+            console.log('DOM加载完成');
+            
+            // 测试按钮是否能被选中
+            var btn = $('#add-rule-btn');
+            console.log('按钮元素:', btn);
+            console.log('按钮数量:', btn.length);
+            
+            // 绑定点击事件
+            btn.on('click', function() {
+                console.log('按钮被点击');
+                
+                // 测试layer是否可用
+                layui.use(['layer', 'form'], function() {
+                    var layer = layui.layer;
+                    var form = layui.form;
+                    
+                    console.log('Layer模块加载成功');
+                    
+                    layer.open({
+                        type: 1,
+                        title: '添加采集规则',
+                        area: ['600px', '450px'],
+                        content: $('#add-rule-modal'),
+                        btn: ['保存', '取消'],
+                        btn1: function(index, layero) {
+                            console.log('保存按钮被点击');
+                            layer.close(index);
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

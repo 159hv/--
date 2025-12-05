@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+
+{% block title %}数据采集 - {{ app_name }}{% endblock %}
+
+{% block page_title %}数据采集管理{% endblock %}
+
+{% block content %}
+<div class="layui-card">
+    <div class="layui-card-header">
+        <h3>数据采集设置</h3>
+    </div>
+    <div class="layui-card-body">
+        <div class="layui-tab layui-tab-brief">
+            <ul class="layui-tab-title">
+                <li class="layui-this">采集任务</li>
+                <li>采集源管理</li>
+                <li>采集日志</li>
+            </ul>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <div class="layui-card">
+                        <div class="layui-card-header">
+                            <h4>实时数据采集</h4>
+                        </div>
+                        <div class="layui-card-body">
+                            <form class="layui-form layui-form-pane" lay-filter="search-form">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">爬虫类型</label>
+                                    <div class="layui-input-block">
+                                        <select name="spider_type" lay-verify="required">
+                                            <option value="baidu">百度新闻爬虫</option>
+                                            <option value="xinhua">新华新闻爬虫</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">搜索关键词</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="keyword" placeholder="请输入搜索关键词" autocomplete="off" class="layui-input" required>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">采集数量</label>
+                                    <div class="layui-input-block">
+                                        <input type="number" name="page" min="1" max="10" value="1" placeholder="请输入采集页数" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <div class="layui-input-block">
+                                        <button class="layui-btn" lay-submit lay-filter="start-collection">
+                                            <i class="layui-icon layui-icon-download-circle"></i> 开始采集
+                                        </button>
+                                        <button type="reset" class="layui-btn layui-btn-primary">
+                                            <i class="layui-icon layui-icon-refresh"></i> 重置
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="layui-card" style="margin-top: 20px;">
+                        <div class="layui-card-header">
+                            <h4>采集结果</h4>
+                        </div>
+                        <div class="layui-card-body">
+                            <div class="layui-btn-group" style="margin-bottom: 10px;">
+                                <button class="layui-btn layui-btn-primary" id="batch-save-btn">
+                                    <i class="layui-icon layui-icon-add-circle-fine"></i> 批量保存到数据仓库
+                                </button>
+                                <button class="layui-btn layui-btn-danger" id="clear-all-btn">
+                                    <i class="layui-icon layui-icon-delete"></i> 清空所有采集结果
+                                </button>
+                            </div>
+                            
+                            <table class="layui-table">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" name="all" lay-skin="primary" id="select-all"></th>
+                                        <th>ID</th>
+                                        <th>标题</th>
+                                        <th>来源</th>
+                                        <th>采集时间</th>
+                                        <th>深度采集</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="collection-result">
+                                    {% if collections %}
+                                        {% for item in collections %}
+                                        <tr>
+                                            <td><input type="checkbox" name="ids" value="{{ item.id }}" lay-skin="primary"></td>
+                                            <td>{{ item.id }}</td>
+                                            <td>
+                                                <a href="{{ item.url }}" target="_blank" title="{{ item.title }}">{{ item.title[:50] }}{{ '...' if item.title|length > 50 else '' }}</a>
+                                            </td>
+                                            <td>{{ item.source }}</td>
+                                            <td>{{ item.collected_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                            <td>
+                                                {% if item.is_deep_collected %}
+                                                    <span class="layui-badge layui-bg-green">已完成</span>
+                                                {% else %}
+                                                    <span class="layui-badge layui-bg-gray">未完成</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="layui-btn-group">
+                                                    <button class="layui-btn layui-btn-xs layui-btn-normal deep-collect-btn" data-url="{{ item.url }}" data-id="{{ item.id }}">
+                                                        <i class="layui-icon layui-icon-diamond"></i> 深度采集
+                                                    </button>
+                                                    <button class="layui-btn layui-btn-xs layui-btn-primary view-detail-btn" data-id="{{ item.id }}" data-url="{{ item.url }}">
+                                                        <i class="layui-icon layui-icon-view"></i> 查看详情
+                                                    </button>
+                                                    <button class="layui-btn layui-btn-xs layui-btn-success save-to-warehouse-btn" data-id="{{ item.id }}">
+                                                        <i class="layui-icon layui-icon-add-circle"></i> 保存
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="7" align="center">
+                                                <div class="layui-elem-quote layui-quote-nm">
+                                                    请输入关键词并点击开始采集
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="layui-tab-item">
+                    <div class="layui-btn-group">
+                        <button class="layui-btn layui-btn-primary">
+                            <i class="layui-icon layui-icon-add-circle-fine"></i> 添加采集源
+                        </button>
+                        <button class="layui-btn layui-btn-primary">
+                            <i class="layui-icon layui-icon-refresh"></i> 刷新列表
+                        </button>
+                    </div>
+                    
+                    <table class="layui-table" style="margin-top: 10px;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>名称</th>
+                                <th>类型</th>
+                                <th>URL</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 这里将通过JavaScript动态加载数据 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="layui-tab-item">
+                    <div class="layui-btn-group">
+                        <button class="layui-btn layui-btn-primary">
+                            <i class="layui-icon layui-icon-refresh"></i> 刷新日志
+                        </button>
+                        <button class="layui-btn layui-btn-primary">
+                            <i class="layui-icon layui-icon-delete"></i> 清空日志
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 10px; height: 400px; overflow-y: auto; border: 1px solid #e6e6e6; padding: 10px;">
+                        <div class="layui-timeline">
+                            <!-- 这里将通过JavaScript动态加载日志 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+        // 初始化LayUI组件
+        layui.use(['element', 'layer', 'form', 'table'], function() {
+            var element = layui.element;
+            var layer = layui.layer;
+            var form = layui.form;
+            var table = layui.table;
+            
+            // 渲染表单
+            form.render();
+            
+            // 监听采集表单提交
+            form.on('submit(start-collection)', function(data) {
+                var loading = layer.load(2, {time: 15000});
+                
+                // 发送AJAX请求到后端采集数据
+                $.ajax({
+                    url: '/data/collection',
+                    type: 'POST',
+                    data: data.field,
+                    timeout: 10000, // 设置超时时间为10秒
+                    cache: false, // 禁用缓存
+                    success: function(res) {
+                        layer.close(loading);
+                        
+                        if (res.code === 0) {
+                            // 显示采集结果
+                            renderCollectionResult(res.data);
+                        } else {
+                            layer.msg(res.msg, {icon: 2});
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        layer.close(loading);
+                        
+                        if (status === 'timeout') {
+                            layer.msg('请求超时，请重试', {icon: 2});
+                        } else if (xhr.status === 500) {
+                            layer.msg('服务器错误，请稍后重试', {icon: 2});
+                        } else {
+                            layer.msg('采集失败，请检查网络连接', {icon: 2});
+                        }
+                    }
+                });
+                
+                return false; // 阻止表单默认提交
+            });
+            
+            // 复选框全选/取消全选
+            $('#select-all').on('click', function() {
+                var checked = $(this).prop('checked');
+                $('input[name="ids"]').prop('checked', checked);
+                layui.form.render('checkbox');
+            });
+            
+            // 单个保存到数据仓库
+            $(document).on('click', '.save-to-warehouse-btn', function() {
+                var id = $(this).data('id');
+                var btn = $(this);
+                var originalText = btn.html();
+                
+                btn.html('<i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i> 保存中...');
+                btn.attr('disabled', true);
+                
+                $.ajax({
+                    url: '/data/save-to-warehouse',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg(res.msg, { icon: 6 });
+                            btn.html('<i class="layui-icon layui-icon-ok"></i> 已保存');
+                            btn.removeClass('layui-btn-success').addClass('layui-btn-disabled');
+                            btn.attr('disabled', true);
+                        } else {
+                            layer.msg(res.msg, { icon: 5 });
+                            btn.html(originalText);
+                        }
+                    },
+                    error: function() {
+                        layer.msg('请求失败', { icon: 5 });
+                        btn.html(originalText);
+                    },
+                    complete: function() {
+                        if (btn.html() !== '<i class="layui-icon layui-icon-ok"></i> 已保存') {
+                            btn.attr('disabled', false);
+                        }
+                    }
+                });
+            });
+            
+            // 批量保存到数据仓库
+            $('#batch-save-btn').on('click', function() {
+                var ids = [];
+                $('input[name="ids"]:checked').each(function() {
+                    ids.push($(this).val());
+                });
+                
+                if (ids.length === 0) {
+                    layer.msg('请选择要保存的数据', { icon: 5 });
+                    return;
+                }
+                
+                layer.confirm('确定要将选中的 ' + ids.length + ' 条数据保存到数据仓库吗？', {
+                    btn: ['确定', '取消']
+                }, function(index) {
+                    var btn = $('#batch-save-btn');
+                    var originalText = btn.html();
+                    
+                    btn.html('<i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i> 保存中...');
+                    btn.attr('disabled', true);
+                    
+                    $.ajax({
+                        url: '/data/batch-save-to-warehouse',
+                        type: 'POST',
+                        data: {
+                            'ids[]': ids
+                        },
+                        success: function(res) {
+                            if (res.code === 0) {
+                                layer.msg(res.msg, { icon: 6 });
+                                location.reload(); // 刷新页面显示最新状态
+                            } else {
+                                layer.msg(res.msg, { icon: 5 });
+                            }
+                        },
+                        error: function() {
+                            layer.msg('请求失败', { icon: 5 });
+                        },
+                        complete: function() {
+                            btn.html(originalText);
+                            btn.attr('disabled', false);
+                        }
+                    });
+                    
+                    layer.close(index);
+                });
+            });
+            
+            // 清空所有采集结果
+            $('#clear-all-btn').on('click', function() {
+                layer.confirm('确定要清空所有采集结果吗？此操作不可恢复！', {
+                    btn: ['确定', '取消'],
+                    icon: 3
+                }, function(index) {
+                    var btn = $('#clear-all-btn');
+                    var originalText = btn.html();
+                    
+                    btn.html('<i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i> 清空ing...');
+                    btn.attr('disabled', true);
+                    
+                    $.ajax({
+                        url: '/data/clear-collection',
+                        type: 'POST',
+                        success: function(res) {
+                            if (res.code === 0) {
+                                layer.msg(res.msg, { icon: 6 });
+                                location.reload(); // 刷新页面显示最新状态
+                            } else {
+                                layer.msg(res.msg, { icon: 5 });
+                            }
+                        },
+                        error: function() {
+                            layer.msg('请求失败', { icon: 5 });
+                        },
+                        complete: function() {
+                            btn.html(originalText);
+                            btn.attr('disabled', false);
+                        }
+                    });
+                    
+                    layer.close(index);
+                });
+            });
+            
+            // 渲染采集结果
+            function renderCollectionResult(data) {
+                var resultDiv = $('#collection-result');
+                
+                if (data.length === 0) {
+                    resultDiv.html('<tr><td colspan="7" align="center"><div class="layui-elem-quote layui-quote-nm">未采集到任何数据</div></td></tr>');
+                    return;
+                }
+                
+                var html = '';
+                for (var i = 0; i < data.length; i++) {
+                    var item = data[i];
+                    var id = item.id || '';
+                    var title = item.title || '';
+                    var source = item.source || '';
+                    var url = item.url || '#';
+                    var collectedAt = item.collected_at ? new Date(item.collected_at).toLocaleString() : '';
+                    var isDeepCollected = item.is_deep_collected || false;
+                    var deepCollectStatus = isDeepCollected ? '<span class="layui-badge layui-bg-green">已完成</span>' : '<span class="layui-badge layui-bg-gray">未完成</span>';
+                    
+                    html += '<tr>';
+                    html += '<td><input type="checkbox" name="ids" value="' + id + '" lay-skin="primary"></td>';
+                    html += '<td>' + id + '</td>';
+                    html += '<td><a href="' + url + '" target="_blank" title="' + title + '">' + title.substring(0, 50) + (title.length > 50 ? '...' : '') + '</a></td>';
+                    html += '<td>' + source + '</td>';
+                    html += '<td>' + collectedAt + '</td>';
+                    html += '<td>' + deepCollectStatus + '</td>';
+                    html += '<td>';
+                    html += '<div class="layui-btn-group">';
+                    html += '<button class="layui-btn layui-btn-xs layui-btn-normal deep-collect-btn" data-url="' + url + '" data-id="' + id + '">';
+                    html += '<i class="layui-icon layui-icon-diamond"></i> 深度采集';
+                    html += '</button>';
+                    html += '<button class="layui-btn layui-btn-xs layui-btn-primary view-detail-btn" data-id="' + id + '" data-url="' + url + '">';
+                    html += '<i class="layui-icon layui-icon-view"></i> 查看详情';
+                    html += '</button>';
+                    html += '<button class="layui-btn layui-btn-xs layui-btn-success save-to-warehouse-btn" data-id="' + id + '">';
+                    html += '<i class="layui-icon layui-icon-add-circle"></i> 保存';
+                    html += '</button>';
+                    html += '</div>';
+                    html += '</td>';
+                    html += '</tr>';
+                }
+                
+                resultDiv.html(html);
+                form.render('checkbox'); // 重新渲染复选框
+            }
+            
+            // 深度采集按钮点击事件
+            $(document).on('click', '.deep-collect-btn', function() {
+                var url = $(this).data('url');
+                var id = $(this).data('id');
+                var btn = $(this);
+                var originalText = btn.html();
+                
+                btn.html('<i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop"></i> 正在采集...');
+                btn.attr('disabled', true);
+                
+                $.ajax({
+                    url: '/data/deep-collection',
+                    type: 'POST',
+                    data: { url: url, collection_id: id },
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.msg(res.msg, { icon: 6 });
+                            btn.html('<i class="layui-icon layui-icon-ok"></i> 采集完成');
+                            btn.removeClass('layui-btn-normal').addClass('layui-btn-success');
+                            
+                            // 更新深度采集状态
+                            var row = btn.closest('tr');
+                            row.find('.layui-badge').removeClass('layui-bg-gray').addClass('layui-bg-green').text('已完成');
+                        } else {
+                            layer.msg(res.msg, { icon: 5 });
+                            btn.html(originalText);
+                        }
+                    },
+                    error: function() {
+                        layer.msg('请求失败', { icon: 5 });
+                        btn.html(originalText);
+                    },
+                    complete: function() {
+                        btn.attr('disabled', false);
+                    }
+                });
+            });
+            
+            // 查看详情按钮点击事件
+            $(document).on('click', '.view-detail-btn', function() {
+                var url = $(this).data('url');
+                if (url) {
+                    window.open(url, '_blank');
+                } else {
+                    layer.msg('该新闻没有有效链接', { icon: 5 });
+                }
+            });
+        });
+    </script>
+{% endblock scripts %}

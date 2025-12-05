@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <!-- 引入layui CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    <!-- 自定义样式 -->
+    <style>
+        /* 仅保留必要的自定义样式，避免与layui默认样式冲突 */
+        .layui-logo {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .layui-body {
+            background-color: #f0f2f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-layout layui-layout-admin">
+        <!-- 顶部导航栏 -->
+        <div class="layui-header">
+            <div class="layui-logo">
+                <a href="{{ url_for('main.index') }}" style="color: #fff; text-decoration: none;">{{ app_name }}</a>
+            </div>
+            
+            <!-- 顶部右侧导航 -->
+            <ul class="layui-nav layui-layout-right">
+                {% if current_user.is_authenticated %}
+                <li class="layui-nav-item">
+                    <a href="javascript:;">
+                        {{ current_user.username }}
+                    </a>
+                    <dl class="layui-nav-child">
+                        <dd><a href="javascript:;">个人信息</a></dd>
+                        <dd><a href="javascript:;">切换账号</a></dd>
+                        <hr class="layui-bg-gray">
+                        <dd><a href="{{ url_for('main.logout') }}">退出登录</a></dd>
+                    </dl>
+                </li>
+                {% else %}
+                <li class="layui-nav-item">
+                    <a href="{{ url_for('main.login') }}">登录</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        
+        <!-- 左侧菜单栏 -->
+        <div class="layui-side layui-bg-black">
+            <div class="layui-logo layui-bg-black" style="font-size: 18px; font-weight: bold;">
+                <a href="{{ url_for('main.index') }}" style="color: #fff; text-decoration: none;">{{ app_name }}</a>
+            </div>
+            
+            <div class="layui-side-scroll">
+                <ul class="layui-nav layui-nav-tree" lay-filter="nav">
+                    <!-- 一级菜单：首页 -->
+                    <li class="layui-nav-item {% if request.endpoint == 'main.index' %}layui-this{% endif %}">
+                        <a href="{{ url_for('main.index') }}">
+                            <i class="layui-icon layui-icon-home"></i> 首页
+                        </a>
+                    </li>
+                    
+                    <!-- 一级菜单：数据采集 -->
+                    <li class="layui-nav-item {% if request.endpoint in ['main.data_collection', 'main.data_warehouse', 'main.collection_rules', 'main.ai_engines'] %}layui-nav-itemed{% endif %}">
+                        <a href="javascript:;">
+                            <i class="layui-icon layui-icon-list"></i> 数据采集
+                        </a>
+                        <dl class="layui-nav-child">
+                            <dd {% if request.endpoint == 'main.data_collection' %}class="layui-this"{% endif %}>
+                                <a href="{{ url_for('main.data_collection') }}">
+                                    <i class="layui-icon layui-icon-download-circle"></i> 数据采集
+                                </a>
+                            </dd>
+                            <dd {% if request.endpoint == 'main.data_warehouse' %}class="layui-this"{% endif %}>
+                                <a href="{{ url_for('main.data_warehouse') }}">
+                                    <i class="layui-icon layui-icon-folder"></i> 数据仓库管理
+                                </a>
+                            </dd>
+                            <dd {% if request.endpoint == 'main.collection_rules' %}class="layui-this"{% endif %}>
+                                <a href="{{ url_for('main.collection_rules') }}">
+                                    <i class="layui-icon layui-icon-set"></i> 采集规则库
+                                </a>
+                            </dd>
+                            <dd {% if request.endpoint == 'main.ai_engines' %}class="layui-this"{% endif %}>
+                                <a href="{{ url_for('main.ai_engines') }}">
+                                    <i class="layui-icon layui-icon-robot"></i> AI引擎管理
+                                </a>
+                            </dd>
+                        </dl>
+                    </li>
+                    
+
+                    
+                    <!-- 一级菜单：管理中心（仅管理员可见） -->
+                    {% if current_user.is_authenticated and current_user.role_id == 1 %}
+                    <li class="layui-nav-item {% if request.endpoint in ['main.admin_users', 'main.admin_settings'] %}layui-nav-itemed{% endif %}">
+                        <a href="javascript:;">
+                            <i class="layui-icon layui-icon-set"></i> 管理中心
+                        </a>
+                        <dl class="layui-nav-child">
+                            <dd {% if request.endpoint == 'main.admin_users' %}class="layui-this"{% endif %}>
+                                <a href="{{ url_for('main.admin_users') }}">
+                                    <i class="layui-icon layui-icon-user"></i> 用户管理
+                                </a>
+                            </dd>
+
+                            <dd {% if request.endpoint == 'main.admin_settings' %}class="layui-this"{% endif %}>
+                                <a href="{{ url_for('main.admin_settings') }}">
+                                    <i class="layui-icon layui-icon-set"></i> 系统设置
+                                </a>
+                            </dd>
+                        </dl>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 主内容区域 -->
+        <div class="layui-body">
+            <div style="padding: 20px;">
+            <!-- 页面标题 -->
+            <h1 style="margin-bottom: 20px; font-size: 24px;">
+                {% block page_title %}{% endblock %}
+            </h1>
+            
+            <!-- 内容区域 -->
+            {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 引入jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- 引入layui JS -->
+    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    
+    <!-- 初始化layui组件 -->
+    <script>
+        layui.use(['element', 'layer'], function() {
+            var element = layui.element;
+            var layer = layui.layer;
+            
+            // 监听导航点击
+            element.on('nav(nav)', function(elem) {
+                console.log(elem.text());
+            });
+        });
+    </script>
+    
+    <!-- 页面自定义脚本 -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
